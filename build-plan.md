@@ -29,6 +29,7 @@ Each phase produces a working, testable increment. No phase requires the next to
 - [x] Add a root `.env.example` documenting all required environment variables (values empty)
 - [x] Confirm all three subdirectories build/compile cleanly with no errors
 
+
 ### Verification
 
 Running `npm install && npm run build` (or equivalent) in each of `infra/`, `backend/`, and `frontend/` produces no errors.
@@ -43,34 +44,34 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 
 #### Cognito
 
-- [ ] Define a Cognito User Pool in CDK with email-based sign-in, no self-registration (admin-only user creation)
-- [ ] Define a User Pool App Client configured for the Hosted UI OAuth flow
-- [ ] Define a Cognito Domain for the Hosted UI
+- [x] Define a Cognito User Pool in CDK with email-based sign-in, no self-registration (admin-only user creation)
+- [x] Define a User Pool App Client configured for the Hosted UI OAuth flow
+- [x] Define a Cognito Domain for the Hosted UI
 - [ ] Manually create at least one test user in the AWS Console to validate the pool _(one-off, not CDK)_
 
 #### Storage & Database
 
-- [ ] Define an S3 bucket for frontend static assets (versioning on, public access blocked, HTTPS-only policy)
-- [ ] Define a CloudFront distribution fronting the S3 bucket (OAC, HTTPS only, default root object `index.html`, SPA 404→200 error response)
-- [ ] Define a DynamoDB table with PK `userId` (String) and SK `profileId` (String)
+- [x] Define an S3 bucket for frontend static assets (versioning on, public access blocked, HTTPS-only policy)
+- [x] Define a CloudFront distribution fronting the S3 bucket (OAC, HTTPS only, default root object `index.html`, SPA 404→200 error response)
+- [x] Define a DynamoDB table with PK `userId` (String) and SK `profileId` (String)
 
 #### Backend Compute
 
-- [ ] Define an ECR repository for the Lambda container image
-- [ ] Define a Lambda function resource (container image source pointing at ECR) with a placeholder/stub image — _function will be updated in Phase 3_
-- [ ] Define an IAM execution role for the Lambda with least-privilege permissions: DynamoDB read/write on the profiles table, SSM Parameter Store read for secrets, CloudWatch Logs write
-- [ ] Define SSM Parameter Store entries (type `SecureString`) as placeholders for: Darwin API key, TfL App ID, TfL App Key
+- [x] Define an ECR repository for the Lambda container image
+- [x] Define a Lambda function resource (container image source pointing at ECR) with a placeholder/stub image — _function will be updated in Phase 3_
+- [x] Define an IAM execution role for the Lambda with least-privilege permissions: DynamoDB read/write on the profiles table, SSM Parameter Store read for secrets, CloudWatch Logs write
+- [x] Define SSM Parameter Store entries (type `SecureString`) as placeholders for: Darwin API key, TfL App ID, TfL App Key
 
 #### API Gateway
 
-- [ ] Define an HTTP API Gateway with a `/{proxy+}` route pointing to the Lambda
-- [ ] Define a JWT authorizer on the API Gateway referencing the Cognito User Pool
-- [ ] Configure CORS on the API Gateway to allow the CloudFront domain as origin
+- [x] Define an HTTP API Gateway with a `/{proxy+}` route pointing to the Lambda
+- [x] Define a JWT authorizer on the API Gateway referencing the Cognito User Pool
+- [x] Configure CORS on the API Gateway to allow the CloudFront domain as origin
 
 #### CDK Stack Organisation
 
-- [ ] Parameterise the CDK stack for `dev` and `prod` environments (separate stack instances, separate resource names/prefixes)
-- [ ] Output from CDK: CloudFront URL, API Gateway URL, Cognito User Pool ID, Cognito App Client ID, Cognito Hosted UI domain — these will be consumed by the frontend build
+- [x] Parameterise the CDK stack for `dev` and `prod` environments (separate stack instances, separate resource names/prefixes)
+- [x] Output from CDK: CloudFront URL, API Gateway URL, Cognito User Pool ID, Cognito App Client ID, Cognito Hosted UI domain — these will be consumed by the frontend build
 
 ### Verification
 
