@@ -103,7 +103,7 @@ npm test                    # requires Docker for DynamoDB Local integration tes
 # Infrastructure
 cd infra
 npm run build
-cdk deploy --all
+cdk deploy --all            # defaults to dev; use -c env=prod for production
 
 # Backend (after CDK deploy)
 ./deploy-backend.sh         # docker build → ECR push → lambda update-function-code
@@ -111,6 +111,28 @@ cdk deploy --all
 # Frontend (after CDK deploy — injects CDK outputs as VITE_* vars)
 ./deploy-frontend.sh        # vite build → s3 sync → cloudfront invalidation
 ```
+
+### Docker Image Requirements
+
+When building Docker images for the Lambda container (backend), you **must** use `--provenance=false` to force Docker V2 Schema 2 manifests. Newer Docker Desktop versions default to OCI manifests, which AWS Lambda does not support. Without this flag, `cdk deploy` will fail with:
+
+> "The image manifest, config or layer media type for the source image ... is not supported."
+
+Example:
+
+```bash
+docker build --platform linux/amd64 --provenance=false -t commute-dev-backend .
+```
+
+### First-Time ECR Bootstrap
+
+The Lambda function references an ECR image, but the ECR repository is created by CDK. On the very first deploy:
+
+1. Comment out the Lambda + API Gateway resources in `infra/lib/infra-stack.ts`
+2. `cdk deploy` to create ECR (and all other resources)
+3. Push a placeholder image to ECR (with `--provenance=false`)
+4. Uncomment Lambda + API Gateway resources
+5. `cdk deploy` again to create the remaining resources
 
 ## Non-Functional Targets
 
