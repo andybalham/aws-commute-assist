@@ -138,34 +138,34 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 
 #### DynamoDB client
 
-- [ ] Create `src/db/dynamoClient.ts` — instantiates the DynamoDB Document Client; uses `DYNAMODB_ENDPOINT` env var to point at DynamoDB Local when running locally, and uses the default SDK endpoint resolution when deployed to Lambda
-- [ ] Create `src/db/profilesRepository.ts` — encapsulates all DynamoDB operations: `listProfiles(userId)`, `getProfile(userId, profileId)`, `putProfile(profile)`, `deleteProfile(userId, profileId)`
+- [x] Create `src/db/dynamoClient.ts` — instantiates the DynamoDB Document Client; uses `DYNAMODB_ENDPOINT` env var to point at DynamoDB Local when running locally, and uses the default SDK endpoint resolution when deployed to Lambda
+- [x] Create `src/db/profilesRepository.ts` — encapsulates all DynamoDB operations: `listProfiles(userId)`, `getProfile(userId, profileId)`, `putProfile(profile)`, `deleteProfile(userId, profileId)`
 
 #### Profile controller
 
-- [ ] Implement `src/controllers/profilesController.ts` replacing the stubs from Phase 2:
+- [x] Implement `src/controllers/profilesController.ts` replacing the stubs from Phase 2:
   - `GET  /api/profiles` — fetch all profiles for the authenticated user
   - `POST /api/profiles` — validate body, generate UUID `profileId`, write to DynamoDB, return created profile
   - `PUT  /api/profiles/:profileId` — validate body, update item, return updated profile
   - `DELETE /api/profiles/:profileId` — delete item, return 204
-- [ ] Enforce that a user can only read/write their own profiles (always scope DynamoDB queries to the JWT `userId`)
-- [ ] Implement `PATCH /api/profiles/:profileId/activate` — sets `isActive: true` on the target profile and `isActive: false` on all others for that user (atomic via DynamoDB transactions or sequential writes)
+- [x] Enforce that a user can only read/write their own profiles (always scope DynamoDB queries to the JWT `userId`)
+- [x] Implement `PATCH /api/profiles/:profileId/activate` — sets `isActive: true` on the target profile and `isActive: false` on all others for that user (atomic via DynamoDB transactions or sequential writes)
 
 #### Station lookup
 
-- [ ] Create `src/data/stations.ts` — a static map of CRS code → `{ name, lat, lon }` covering all National Rail stations (sourced from a community-maintained dataset, e.g., the RDG open data station list)
-- [ ] Expose a `GET /api/stations?q=<query>` endpoint that searches the static list by name or CRS prefix and returns up to 10 matches — used by the frontend station autocomplete (CFG-04)
+- [x] Create `src/data/stations.ts` — a static map of CRS code → `{ name, lat, lon }` covering all National Rail stations (sourced from a community-maintained dataset, e.g., the RDG open data station list)
+- [x] Expose a `GET /api/stations?q=<query>` endpoint that searches the static list by name or CRS prefix and returns up to 10 matches — used by the frontend station autocomplete (CFG-04)
 
 #### Input validation
 
-- [ ] Validate all incoming profile bodies (required fields, CRS codes exist in the station lookup, departure times are valid HH:MM strings, `tflLines` is an array of known TfL line IDs)
-- [ ] Return structured `400` responses with field-level error details for invalid input
+- [x] Validate all incoming profile bodies (required fields, CRS codes exist in the station lookup, departure times are valid HH:MM strings, `tflLines` is an array of known TfL line IDs)
+- [x] Return structured `400` responses with field-level error details for invalid input
 
 #### Tests
 
-- [ ] Unit tests for `profilesRepository.ts` using a mocked DynamoDB Document Client
-- [ ] Unit tests for `profilesController.ts` using a mocked repository
-- [ ] Integration test: spin up DynamoDB Local in Docker as part of the test run, exercise the full CRUD cycle end-to-end
+- [x] Unit tests for `profilesRepository.ts` using a mocked DynamoDB Document Client
+- [x] Unit tests for `profilesController.ts` using a mocked repository
+- [x] Integration test: spin up DynamoDB Local in Docker as part of the test run, exercise the full CRUD cycle end-to-end
 
 ### Verification
 

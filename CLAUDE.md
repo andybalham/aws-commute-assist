@@ -92,9 +92,14 @@ cp .env.local.example .env.local   # fill in VITE_* values
 npm install
 npm run dev                 # starts Vite dev server
 
-# Run backend tests
+# Run backend tests (unit tests only — no Docker required)
 cd backend
-npm test                    # requires Docker for DynamoDB Local integration tests
+npm test
+
+# Run backend tests including DynamoDB Local integration tests
+docker run -d --name dynamodb-local -p 8000:8000 amazon/dynamodb-local
+DYNAMODB_ENDPOINT=http://localhost:8000 npm test
+docker stop dynamodb-local && docker rm dynamodb-local
 ```
 
 ## Build & Deploy
@@ -163,6 +168,36 @@ The Lambda function references an ECR image, but the ECR repository is created b
 3. Push a placeholder image to ECR (with `--provenance=false`)
 4. Uncomment Lambda + API Gateway resources
 5. `cdk deploy` again to create the remaining resources
+
+### AWS SDK v3 + Jest on Node 22+
+
+AWS SDK v3 uses dynamic imports internally, which requires the `--experimental-vm-modules` Node flag when running under Jest. Without it, tests that actually call the SDK (e.g., integration tests against DynamoDB Local) fail with:
+
+> `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG`
+
+The `npm test` script uses `cross-env` to set `NODE_OPTIONS=--experimental-vm-modules` cross-platform (Windows does not support inline env vars in npm scripts). This flag is harmless for unit tests that mock the SDK — it only matters when the SDK executes real calls.
+
+### DynamoDB Local Integration Tests
+
+The integration test in `src/__tests__/integration.test.ts` uses `describe.skip` when `DYNAMODB_ENDPOINT` is not set, so `npm test` always passes even without Docker. To run the full suite including integration:
+
+```bash
+docker run -d --name dynamodb-local -p 8000:8000 amazon/dynamodb-local
+DYNAMODB_ENDPOINT=http://localhost:8000 npm test
+docker stop dynamodb-local && docker rm dynamodb-local
+```
+
+The test creates a uniquely-named table per run and tears it down afterwards, so it is safe to run repeatedly.
+
+### Input Validation
+
+Profile input validation (`src/validation.ts`) checks:
+- Required fields: `name`, `outbound`, `return` (each with `originCRS`, `destinationCRS`, `departureTime`)
+- CRS codes must exist in the static station lookup (`src/data/stations.ts`)
+- Departure times must be valid `HH:MM` strings (00:00–23:59)
+- `tflLines` (if provided) must be an array of known TfL line IDs
+
+Invalid requests return `400` with a `{ errors: [{ field, message }] }` body.
 
 ## Non-Functional Targets
 

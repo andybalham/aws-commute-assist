@@ -5,8 +5,10 @@ import {
   createProfile,
   updateProfile,
   deleteProfile,
+  activateProfile,
 } from './controllers/profilesController';
 import { getDashboard } from './controllers/dashboardController';
+import { getStations } from './controllers/stationsController';
 
 type RouteHandler = (ctx: RouteContext) => RouteResponse | Promise<RouteResponse>;
 
@@ -47,6 +49,18 @@ const routes: Route[] = [
     pattern: /^\/api\/profiles\/([^/]+)$/,
     paramNames: ['profileId'],
     handler: deleteProfile,
+  },
+  {
+    method: 'PATCH',
+    pattern: /^\/api\/profiles\/([^/]+)\/activate$/,
+    paramNames: ['profileId'],
+    handler: activateProfile,
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/stations$/,
+    paramNames: [],
+    handler: getStations,
   },
   {
     method: 'GET',
