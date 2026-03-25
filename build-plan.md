@@ -91,36 +91,36 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 
 #### Project setup
 
-- [ ] Configure TypeScript (`tsconfig.json`) with strict mode, `esModuleInterop`, output to `dist/`
-- [ ] Install runtime dependencies: `express`, `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `axios`, `dotenv`
-- [ ] Install dev dependencies: `typescript`, `ts-node`, `nodemon`, `jest`, `ts-jest`, `@types/*`
-- [ ] Add npm scripts: `build`, `start` (production Lambda), `dev` (local Express runner), `test`
+- [x] Configure TypeScript (`tsconfig.json`) with strict mode, `esModuleInterop`, output to `dist/`
+- [x] Install runtime dependencies: `express`, `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `axios`, `dotenv`
+- [x] Install dev dependencies: `typescript`, `ts-node`, `nodemon`, `jest`, `ts-jest`, `@types/*`
+- [x] Add npm scripts: `build`, `start` (production Lambda), `dev` (local Express runner), `test`
 
 #### Handler & local runner
 
-- [ ] Create `src/handler.ts` — the Lambda entry point; receives `APIGatewayProxyEventV2`, extracts `userId` from the JWT claims, delegates to the router, returns a well-formed proxy response
-- [ ] Create `src/server.ts` — a thin Express wrapper that listens on a configurable port, injects a mock `userId` header for local dev, and calls the same router as the Lambda handler
-- [ ] Create `src/router.ts` — maps HTTP method + path to controller functions; shared between handler and server
+- [x] Create `src/handler.ts` — the Lambda entry point; receives `APIGatewayProxyEventV2`, extracts `userId` from the JWT claims, delegates to the router, returns a well-formed proxy response
+- [x] Create `src/server.ts` — a thin Express wrapper that listens on a configurable port, injects a mock `userId` header for local dev, and calls the same router as the Lambda handler
+- [x] Create `src/router.ts` — maps HTTP method + path to controller functions; shared between handler and server
 
 #### Stub routes (no real data yet)
 
-- [ ] `GET  /health` — returns `{ status: "ok" }` (unauthenticated; useful for container health checks)
-- [ ] `GET  /api/profiles` — returns an empty array `[]`
-- [ ] `POST /api/profiles` — accepts a profile body, returns it echoed with a generated `profileId`
-- [ ] `PUT  /api/profiles/:profileId` — stub 200
-- [ ] `DELETE /api/profiles/:profileId` — stub 204
-- [ ] `GET  /api/dashboard` — returns a hardcoded stub payload shaped like the final dashboard response (rail, weather, TfL sections all present with placeholder data)
+- [x] `GET  /health` — returns `{ status: "ok" }` (unauthenticated; useful for container health checks)
+- [x] `GET  /api/profiles` — returns an empty array `[]`
+- [x] `POST /api/profiles` — accepts a profile body, returns it echoed with a generated `profileId`
+- [x] `PUT  /api/profiles/:profileId` — stub 200
+- [x] `DELETE /api/profiles/:profileId` — stub 204
+- [x] `GET  /api/dashboard` — returns a hardcoded stub payload shaped like the final dashboard response (rail, weather, TfL sections all present with placeholder data)
 
 #### Configuration
 
-- [ ] Create `.env.example` in `backend/` documenting: `PORT`, `DYNAMODB_ENDPOINT`, `DYNAMODB_TABLE_NAME`, `DARWIN_API_KEY`, `TFL_APP_ID`, `TFL_APP_KEY`, `AWS_REGION`
-- [ ] Read all config from environment variables via a `src/config.ts` module; no hardcoded values anywhere else
+- [x] Create `.env.example` in `backend/` documenting: `PORT`, `DYNAMODB_ENDPOINT`, `DYNAMODB_TABLE_NAME`, `DARWIN_API_KEY`, `TFL_APP_ID`, `TFL_APP_KEY`, `AWS_REGION`
+- [x] Read all config from environment variables via a `src/config.ts` module; no hardcoded values anywhere else
 
 #### Docker
 
-- [ ] Write a multi-stage `Dockerfile`: stage 1 installs all deps and compiles TypeScript; stage 2 is a lean production image using the AWS Lambda Node.js base image (`public.ecr.aws/lambda/nodejs`), copying only compiled output and production `node_modules`
-- [ ] Confirm `docker build` succeeds locally
-- [ ] Confirm the container starts and `GET /health` responds when run with `docker run` and appropriate env vars
+- [x] Write a multi-stage `Dockerfile`: stage 1 installs all deps and compiles TypeScript; stage 2 is a lean production image using the AWS Lambda Node.js base image (`public.ecr.aws/lambda/nodejs`), copying only compiled output and production `node_modules`
+- [x] Confirm `docker build` succeeds locally
+- [x] Confirm the container starts and `GET /health` responds when run with `docker run` and appropriate env vars
 
 ### Verification
 

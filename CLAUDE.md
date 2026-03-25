@@ -124,6 +124,36 @@ Example:
 docker build --platform linux/amd64 --provenance=false -t commute-dev-backend .
 ```
 
+### Testing the Lambda Container Locally (RIE)
+
+The AWS Lambda base image (`public.ecr.aws/lambda/nodejs:20`) bundles the **Lambda Runtime Interface Emulator (RIE)**. When you `docker run` the container outside of AWS, the RIE starts automatically and simulates the Lambda invocation API on port 8080.
+
+This is different from `npm run dev` (Express): instead of normal HTTP requests, you POST a JSON event matching the `APIGatewayProxyEventV2WithJWTAuthorizer` shape to the RIE endpoint. The RIE feeds this to your handler and returns the handler's response. JWT validation does **not** happen here — that's an API Gateway concern in AWS. The RIE simply passes through whatever claims you include in the event.
+
+Use this to validate the built container works before pushing to ECR.
+
+```bash
+# Build
+docker build --platform linux/amd64 --provenance=false -t commute-dev-backend .
+
+# Run (maps container port 8080 → host port 9000)
+docker run -d --name commute-test -p 9000:8080 commute-dev-backend
+
+# Invoke the handler with a mock API Gateway event
+curl -s -X POST "http://localhost:9000/2015-03-31/functions/function/invocations" \
+  -d '{
+    "rawPath": "/health",
+    "requestContext": {
+      "http": { "method": "GET" },
+      "authorizer": { "jwt": { "claims": { "sub": "test-user" } } }
+    }
+  }'
+# → {"statusCode":200,"headers":{"Content-Type":"application/json"},"body":"{\"status\":\"ok\"}"}
+
+# Cleanup
+docker stop commute-test && docker rm commute-test
+```
+
 ### First-Time ECR Bootstrap
 
 The Lambda function references an ECR image, but the ECR repository is created by CDK. On the very first deploy:
