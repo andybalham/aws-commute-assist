@@ -1,91 +1,121 @@
 import { RouteContext, RouteResponse, DashboardResponse } from '../types';
+import { listProfiles } from '../db/profilesRepository';
+import { getDepartures, getServiceMessages } from '../services/railService';
+import { getWeatherForecast } from '../services/weatherService';
+import { getLineStatuses } from '../services/tflService';
 
-export function getDashboard(_ctx: RouteContext): RouteResponse {
-  const stub: DashboardResponse = {
+function todayAt(time: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  return `${today}T${time}:00`;
+}
+
+export async function getDashboard(ctx: RouteContext): Promise<RouteResponse> {
+  const profiles = await listProfiles(ctx.userId);
+  const profile = profiles.find((p) => p.isActive);
+
+  if (!profile) {
+    return {
+      statusCode: 404,
+      body: { error: 'No active profile. Create and activate a profile first.' },
+    };
+  }
+
+  // Fan out all service calls in parallel — each independently error-handled
+  const [
+    outboundRailResult,
+    returnRailResult,
+    outboundMessagesResult,
+    weatherOriginResult,
+    weatherDestResult,
+    weatherReturnResult,
+    tflResult,
+  ] = await Promise.allSettled([
+    getDepartures(
+      profile.outbound.originCRS,
+      profile.outbound.destinationCRS,
+      profile.outbound.departureTime
+    ),
+    getDepartures(
+      profile.return.originCRS,
+      profile.return.destinationCRS,
+      profile.return.departureTime
+    ),
+    getServiceMessages(profile.outbound.originCRS),
+    getWeatherForecast(
+      profile.outbound.originCRS,
+      todayAt(profile.outbound.departureTime)
+    ),
+    getWeatherForecast(
+      profile.outbound.destinationCRS,
+      todayAt(profile.outbound.departureTime)
+    ),
+    getWeatherForecast(
+      profile.return.originCRS,
+      todayAt(profile.return.departureTime)
+    ),
+    profile.tflLines.length > 0
+      ? getLineStatuses(profile.tflLines)
+      : Promise.resolve([]),
+  ]);
+
+  const response: DashboardResponse = {
     profile: {
-      name: 'Default Commute',
-      profileId: 'stub-profile-id',
+      name: profile.name,
+      profileId: profile.profileId,
     },
     rail: {
       outbound: {
-        services: [
-          {
-            scheduledTime: '07:30',
-            expectedTime: '07:30',
-            platform: '2',
-            operator: 'Southern',
-            callingPoints: ['East Croydon', 'London Victoria'],
-            status: 'on-time',
-          },
-          {
-            scheduledTime: '07:45',
-            expectedTime: '07:52',
-            platform: '1',
-            operator: 'Southern',
-            callingPoints: ['East Croydon', 'London Bridge'],
-            status: 'delayed',
-          },
-        ],
-        messages: [],
+        services:
+          outboundRailResult.status === 'fulfilled'
+            ? outboundRailResult.value.services
+            : [],
+        messages:
+          outboundMessagesResult.status === 'fulfilled'
+            ? outboundMessagesResult.value
+            : [],
+        ...(outboundRailResult.status === 'rejected' && {
+          error: `Rail service error: ${outboundRailResult.reason?.message ?? 'Unknown error'}`,
+        }),
       },
       return: {
-        services: [
-          {
-            scheduledTime: '17:30',
-            expectedTime: '17:30',
-            platform: null,
-            operator: 'Southern',
-            callingPoints: ['East Croydon', 'Brighton'],
-            status: 'on-time',
-          },
-        ],
+        services:
+          returnRailResult.status === 'fulfilled'
+            ? returnRailResult.value.services
+            : [],
         messages: [],
+        ...(returnRailResult.status === 'rejected' && {
+          error: `Rail service error: ${returnRailResult.reason?.message ?? 'Unknown error'}`,
+        }),
       },
     },
     weather: {
-      outboundOrigin: {
-        location: 'Brighton',
-        time: '07:30',
-        condition: 'Partly cloudy',
-        temperatureC: 12,
-        precipitationProbability: 20,
-        windSpeedKmh: 15,
-      },
-      destination: {
-        location: 'London Victoria',
-        time: '08:15',
-        condition: 'Overcast',
-        temperatureC: 14,
-        precipitationProbability: 40,
-        windSpeedKmh: 10,
-      },
-      returnOrigin: {
-        location: 'London Victoria',
-        time: '17:30',
-        condition: 'Light rain',
-        temperatureC: 13,
-        precipitationProbability: 75,
-        windSpeedKmh: 20,
-      },
+      outboundOrigin:
+        weatherOriginResult.status === 'fulfilled'
+          ? weatherOriginResult.value
+          : null,
+      destination:
+        weatherDestResult.status === 'fulfilled'
+          ? weatherDestResult.value
+          : null,
+      returnOrigin:
+        weatherReturnResult.status === 'fulfilled'
+          ? weatherReturnResult.value
+          : null,
+      ...((weatherOriginResult.status === 'rejected' ||
+        weatherDestResult.status === 'rejected' ||
+        weatherReturnResult.status === 'rejected') && {
+        error: 'Weather service partially or fully unavailable',
+      }),
     },
     tfl: {
-      lines: [
-        {
-          lineId: 'victoria',
-          lineName: 'Victoria',
-          status: 'Good Service',
-          reason: null,
-        },
-        {
-          lineId: 'district',
-          lineName: 'District',
-          status: 'Minor Delays',
-          reason: 'Minor delays due to an earlier signal failure',
-        },
-      ],
+      lines:
+        tflResult.status === 'fulfilled' ? tflResult.value : [],
+      ...(tflResult.status === 'rejected' && {
+        error: `TfL service error: ${tflResult.reason?.message ?? 'Unknown error'}`,
+      }),
     },
     lastRefreshed: new Date().toISOString(),
   };
 
-  return { statusCode: 200, body: stub };
+  return { statusCode: 200, body: response };
 }

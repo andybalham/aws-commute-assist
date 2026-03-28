@@ -184,36 +184,36 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 
 #### Weather service (Open-Meteo)
 
-- [ ] Create `src/services/weatherService.ts`
-- [ ] Implement `getWeatherForecast(crs: string, isoDateTime: string): Promise<WeatherSummary>` which: resolves CRS to coordinates via the stations lookup, calls the Open-Meteo hourly forecast API for the target date/time, extracts temperature, precipitation probability, wind speed, and WMO weather code mapped to a human-readable condition string
-- [ ] Define the `WeatherSummary` response type in `src/types/`
-- [ ] Unit tests with mocked HTTP responses for known Open-Meteo payloads
+- [x] Create `src/services/weatherService.ts`
+- [x] Implement `getWeatherForecast(crs: string, isoDateTime: string): Promise<WeatherSummary>` which: resolves CRS to coordinates via the stations lookup, calls the Open-Meteo hourly forecast API for the target date/time, extracts temperature, precipitation probability, wind speed, and WMO weather code mapped to a human-readable condition string
+- [x] Define the `WeatherSummary` response type in `src/types/`
+- [x] Unit tests with mocked HTTP responses for known Open-Meteo payloads
 
 #### Rail service (Darwin OpenLDBWS)
 
-- [ ] Create `src/services/railService.ts`
-- [ ] Darwin OpenLDBWS is a SOAP API — install `soap` npm package (or use `axios` with raw XML and a lightweight SOAP envelope helper)
-- [ ] Implement `getDepartures(originCRS: string, destinationCRS: string, targetTime: string): Promise<DepartureSummary>` which: calls `GetDepartureBoardWithDetails`, filters results to a ±30-minute window around `targetTime`, maps each service to the `TrainService` type (scheduled time, expected time, platform, operator, calling points, status flag)
-- [ ] Implement `getServiceMessages(crs: string): Promise<string[]>` which calls `GetStationMessages` for the origin station
-- [ ] Define `DepartureSummary` and `TrainService` types in `src/types/`
-- [ ] Darwin API key is read from `config.ts` (which reads from env / SSM); never hardcoded
-- [ ] Unit tests with mocked SOAP responses
+- [x] Create `src/services/railService.ts`
+- [x] Darwin OpenLDBWS is a SOAP API — install `soap` npm package (or use `axios` with raw XML and a lightweight SOAP envelope helper)
+- [x] Implement `getDepartures(originCRS: string, destinationCRS: string, targetTime: string): Promise<DepartureSummary>` which: calls `GetDepartureBoardWithDetails`, filters results to a ±30-minute window around `targetTime`, maps each service to the `TrainService` type (scheduled time, expected time, platform, operator, calling points, status flag)
+- [x] Implement `getServiceMessages(crs: string): Promise<string[]>` which calls `GetStationMessages` for the origin station
+- [x] Define `DepartureSummary` and `TrainService` types in `src/types/`
+- [x] Darwin API key is read from `config.ts` (which reads from env / SSM); never hardcoded
+- [x] Unit tests with mocked SOAP responses
 
 #### TfL service
 
-- [ ] Create `src/services/tflService.ts`
-- [ ] Implement `getLineStatuses(lineIds: string[]): Promise<TflLineSummary[]>` which calls `GET /Line/{ids}/Status` on the TfL Unified API and maps each line to `{ lineId, lineName, status, reason }`
-- [ ] Define `TflLineSummary` type in `src/types/`
-- [ ] TfL App ID and key read from `config.ts`
-- [ ] Unit tests with mocked HTTP responses
+- [x] Create `src/services/tflService.ts`
+- [x] Implement `getLineStatuses(lineIds: string[]): Promise<TflLineSummary[]>` which calls `GET /Line/{ids}/Status` on the TfL Unified API and maps each line to `{ lineId, lineName, status, reason }`
+- [x] Define `TflLineSummary` type in `src/types/`
+- [x] TfL App ID and key read from `config.ts`
+- [x] Unit tests with mocked HTTP responses
 
 #### Dashboard controller
 
-- [ ] Create `src/controllers/dashboardController.ts`
-- [ ] Implement `GET /api/dashboard`: fetch the user's active profile from DynamoDB; fan out in parallel (`Promise.all`) to rail (outbound), rail (return), weather (3 calls), and TfL (if lines configured); assemble and return a single `DashboardResponse` payload
-- [ ] Each service call shall be independently error-handled: a failure in one service populates that section's `error` field in the response rather than failing the whole request (NFR-05)
-- [ ] Define `DashboardResponse` type covering all sections with optional `error` strings per section
-- [ ] Unit tests for the dashboard controller with all services mocked
+- [x] Create `src/controllers/dashboardController.ts`
+- [x] Implement `GET /api/dashboard`: fetch the user's active profile from DynamoDB; fan out in parallel (`Promise.all`) to rail (outbound), rail (return), weather (3 calls), and TfL (if lines configured); assemble and return a single `DashboardResponse` payload
+- [x] Each service call shall be independently error-handled: a failure in one service populates that section's `error` field in the response rather than failing the whole request (NFR-05)
+- [x] Define `DashboardResponse` type covering all sections with optional `error` strings per section
+- [x] Unit tests for the dashboard controller with all services mocked
 
 ### Verification
 
