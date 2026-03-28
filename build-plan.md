@@ -232,41 +232,41 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 
 #### Project configuration
 
-- [ ] Install and configure Tailwind CSS (`tailwind.config.js`, `postcss.config.js`, import in `index.css`)
-- [ ] Install AWS Amplify JS: `aws-amplify`
-- [ ] Create `src/amplify-config.ts` — reads Cognito User Pool ID, App Client ID, Hosted UI domain, and API Gateway URL from Vite environment variables (`import.meta.env.VITE_*`)
-- [ ] Create `.env.local` (gitignored) and `.env.local.example` documenting all required `VITE_*` variables
-- [ ] Call `Amplify.configure()` in `main.tsx` before rendering the app
+- [x] Install and configure Tailwind CSS (v4 via `@tailwindcss/vite` plugin — no `tailwind.config.js` or `postcss.config.js` needed; `index.css` uses `@import "tailwindcss"`)
+- [x] Install AWS Amplify JS: `aws-amplify`
+- [x] Create `src/amplify-config.ts` — reads Cognito User Pool ID, App Client ID, Hosted UI domain, and API Gateway URL from Vite environment variables (`import.meta.env.VITE_*`)
+- [x] Create `.env.local` (gitignored) and `.env.local.example` documenting all required `VITE_*` variables
+- [x] Call `Amplify.configure()` in `main.tsx` before rendering the app
 
 #### Authentication
 
-- [ ] Wrap the app in an Amplify Authenticator component configured to use the Cognito Hosted UI redirect flow
-- [ ] Implement sign-out: a button available from any page that calls `Auth.signOut()` and redirects to the login page
-- [ ] Handle the OAuth callback redirect from the Hosted UI (`/callback` route or Amplify's built-in handler)
-- [ ] Ensure all React Query API calls automatically attach the Cognito `idToken` as a `Bearer` token in the `Authorization` header via a shared Axios instance or React Query default options
-- [ ] Confirm unauthenticated users are redirected to the Hosted UI login (AUTH-04)
+- [x] Wrap the app in a `ProtectedRoute` component that uses `signInWithRedirect()` for the Cognito Hosted UI redirect flow
+- [x] Implement sign-out: a button available from any page that calls `signOut()` from `aws-amplify/auth`
+- [x] Handle the OAuth callback redirect from the Hosted UI (Amplify's built-in handler via `VITE_REDIRECT_URL` pointing to `/callback`)
+- [x] Ensure all React Query API calls automatically attach the Cognito `idToken` as a `Bearer` token in the `Authorization` header via a shared Axios instance with a request interceptor
+- [x] Confirm unauthenticated users are redirected to the Hosted UI login (AUTH-04)
 
 #### Routing
 
-- [ ] Install `react-router-dom`
-- [ ] Define routes:
+- [x] Install `react-router-dom`
+- [x] Define routes:
   - `/` → Dashboard page (protected)
   - `/profiles` → Profile management page (protected)
-  - `/callback` → Auth callback handler
   - `*` → redirect to `/`
-- [ ] Create a `ProtectedRoute` component that checks Amplify auth state and redirects to login if unauthenticated
+- [x] Create a `ProtectedRoute` component that checks Amplify auth state and redirects to login if unauthenticated
 
 #### Page shells (no data yet)
 
-- [ ] `DashboardPage` — renders a header, a profile selector placeholder, and three empty section cards: Rail, Weather, TfL
-- [ ] `ProfilesPage` — renders a header and an empty profile list placeholder
-- [ ] Shared `Layout` component with top navigation (app title, active page indicator, sign-out button)
+- [x] `DashboardPage` — renders a header, a profile selector placeholder, and three empty section cards: Rail, Weather, TfL
+- [x] `ProfilesPage` — renders a header and an empty profile list placeholder
+- [x] Shared `Layout` component with top navigation (app title, active page indicator, sign-out button)
 
 #### API client
 
-- [ ] Create `src/api/apiClient.ts` — an Axios instance with the API Gateway base URL and a request interceptor that fetches the current Amplify session token and injects it as a `Bearer` auth header
-- [ ] Create `src/api/dashboardApi.ts` — `fetchDashboard(): Promise<DashboardResponse>`
-- [ ] Create `src/api/profilesApi.ts` — `fetchProfiles()`, `createProfile()`, `updateProfile()`, `deleteProfile()`, `activateProfile()`, `searchStations()`
+- [x] Create `src/api/apiClient.ts` — an Axios instance with the API Gateway base URL and a request interceptor that fetches the current Amplify session token and injects it as a `Bearer` auth header
+- [x] Create `src/api/dashboardApi.ts` — `fetchDashboard(): Promise<DashboardResponse>`
+- [x] Create `src/api/profilesApi.ts` — `fetchProfiles()`, `createProfile()`, `updateProfile()`, `deleteProfile()`, `activateProfile()`, `searchStations()`
+- [x] Create `src/api/types.ts` — TypeScript types matching backend (CommuteProfile, DashboardResponse, TrainService, WeatherSummary, TflLineSummary, StationMatch)
 
 ### Verification
 

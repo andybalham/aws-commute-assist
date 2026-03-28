@@ -25,9 +25,11 @@ commute-dashboard/
 │   └── Dockerfile
 └── frontend/       # React + Vite + TypeScript SPA
     └── src/
-        ├── api/            # apiClient, dashboardApi, profilesApi
-        ├── amplify-config.ts
-        └── pages/          # DashboardPage, ProfilesPage
+        ├── api/            # apiClient.ts, dashboardApi.ts, profilesApi.ts, types.ts
+        ├── components/     # Layout.tsx, ProtectedRoute.tsx
+        ├── hooks/          # useAuth.ts
+        ├── pages/          # DashboardPage.tsx, ProfilesPage.tsx
+        └── amplify-config.ts
 ```
 
 ## Tech Stack
@@ -57,8 +59,12 @@ commute-dashboard/
 ### Frontend
 
 - All `VITE_*` environment variables are defined in `.env.local` (gitignored); `.env.local.example` documents them.
-- The shared Axios instance in `src/api/apiClient.ts` attaches the Cognito `idToken` as a `Bearer` header on every request.
-- Unauthenticated users are always redirected to the Cognito Hosted UI — no custom login page.
+- The shared Axios instance in `src/api/apiClient.ts` attaches the Cognito `idToken` as a `Bearer` header on every request via a request interceptor that calls `fetchAuthSession()` from Amplify.
+- Unauthenticated users are always redirected to the Cognito Hosted UI — no custom login page. The `ProtectedRoute` component checks auth state and calls `signInWithRedirect()` in a `useEffect` (not during render — React StrictMode double-renders break inline side effects).
+- Amplify is configured in `src/amplify-config.ts` and called in `main.tsx` before the React tree renders.
+- React Query (`@tanstack/react-query`) is the data-fetching layer; the `QueryClientProvider` wraps the app in `main.tsx`.
+- Routing uses `react-router-dom` with a `Layout` component (nav + `<Outlet />`) nested under `ProtectedRoute`.
+- Tailwind CSS v4 is used via the `@tailwindcss/vite` plugin — no `tailwind.config.js` or `postcss.config.js` needed; `index.css` uses `@import "tailwindcss"`.
 
 ### Infrastructure
 
@@ -88,9 +94,9 @@ npm run dev                 # starts Express on configured PORT
 
 # Frontend
 cd frontend
-cp .env.local.example .env.local   # fill in VITE_* values
+cp .env.local.example .env.local   # fill in VITE_* values (see below)
 npm install
-npm run dev                 # starts Vite dev server
+npm run dev                 # starts Vite dev server on http://localhost:5173
 
 # Run backend tests (unit tests only — no Docker required)
 cd backend
@@ -101,6 +107,33 @@ docker run -d --name dynamodb-local -p 8000:8000 amazon/dynamodb-local
 DYNAMODB_ENDPOINT=http://localhost:8000 npm test
 docker stop dynamodb-local && docker rm dynamodb-local
 ```
+
+### Frontend Environment Variables
+
+The frontend requires these `VITE_*` variables in `frontend/.env.local`:
+
+| Variable | Source | Example |
+|----------|--------|---------|
+| `VITE_COGNITO_USER_POOL_ID` | CDK output `UserPoolId` | `eu-west-2_AbCdEfG` |
+| `VITE_COGNITO_APP_CLIENT_ID` | CDK output `UserPoolClientId` | `7aha5grp...` |
+| `VITE_COGNITO_DOMAIN` | CDK output `CognitoDomain` | `commute-dev-auth.auth.eu-west-2.amazoncognito.com` |
+| `VITE_API_URL` | CDK output `ApiUrl` | `https://abc123.execute-api.eu-west-2.amazonaws.com` |
+| `VITE_REDIRECT_URL` | Cognito callback URL | `http://localhost:5173/callback` (dev) or `https://<cloudfront>/callback` (prod) |
+
+To retrieve CDK outputs:
+
+```bash
+aws cloudformation describe-stacks --stack-name commute-dev --query "Stacks[0].Outputs" --output table
+```
+
+### Cognito OAuth Callback URLs
+
+The CDK stack configures the Cognito App Client with both production and local dev callback/logout URLs. The `VITE_REDIRECT_URL` must exactly match one of the allowed callback URLs in Cognito — including the `/callback` path. The CDK already allows:
+
+- **Callback:** `https://<cloudfront>/callback` and `http://localhost:5173/callback`
+- **Logout:** `https://<cloudfront>` and `http://localhost:5173`
+
+If you change the dev server port or add a new deployment URL, update both the CDK (`infra/lib/infra-stack.ts` → `oAuth.callbackUrls` / `logoutUrls`) and redeploy.
 
 ## Build & Deploy
 
