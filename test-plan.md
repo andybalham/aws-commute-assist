@@ -79,11 +79,32 @@ docker stop dynamodb-local && docker rm dynamodb-local
 
 ---
 
-## 3. Frontend E2E Tests (Playwright — Manual)
+## 3. Frontend E2E Tests (Playwright)
 
-The frontend has no automated test suite yet. The following manual E2E script was validated using Playwright against the local dev stack and should be repeated after any UI changes.
+Automated Playwright tests in `frontend/e2e/` cover the full profile CRUD lifecycle, form validation, station autocomplete, TfL line selection, dashboard display, and navigation. A global setup script (`e2e/global-setup.ts`) deletes any leftover profiles via the backend API before each run, ensuring tests always start from a clean state.
 
 ### Local dev stack setup
+
+**Windows (PowerShell):**
+
+```powershell
+# Start everything (DynamoDB Local, backend, frontend) in one command:
+.\Start-DevStack.ps1
+
+# Stop everything afterwards:
+.\Stop-DevStack.ps1
+```
+
+The `Start-DevStack.ps1` script:
+1. Starts DynamoDB Local in Docker (idempotent — reuses existing container)
+2. Waits for DynamoDB Local readiness and creates the `commute-profiles` table
+3. Verifies `backend/.env` points at local DynamoDB
+4. Writes `frontend/.env.local` with auth bypass + local API URL (backs up any existing file)
+5. Opens backend and frontend dev servers in separate PowerShell windows
+
+The `Stop-DevStack.ps1` script stops/removes the Docker container and restores `frontend/.env.local` from backup.
+
+**Bash (macOS / Linux / WSL):**
 
 ```bash
 # 1. Start DynamoDB Local
@@ -111,7 +132,17 @@ cd frontend
 npm run dev
 ```
 
+### Running E2E tests
+
+```bash
+cd frontend
+npm run test:e2e              # headed (visible browser, default)
+npm run test:e2e -- --headed=false  # headless
+```
+
 ### Test script
+
+The automated tests in `frontend/e2e/commute-dashboard.spec.ts` cover the following scenarios:
 
 #### 3.1 — Empty state
 
@@ -200,6 +231,15 @@ npm run dev
 
 ### Teardown
 
+**Windows (PowerShell):**
+
+```powershell
+.\Stop-DevStack.ps1
+# Close the backend and frontend PowerShell windows manually (Ctrl+C)
+```
+
+**Bash:**
+
 ```bash
 # Restore frontend/.env.local:
 #   VITE_API_URL=https://<api-gateway-url>
@@ -255,8 +295,8 @@ Run these against the live AWS environment after each deployment. These require 
 
 ## 5. Test Coverage Summary
 
-| Area | Unit | Integration | E2E (manual) | Smoke (deployed) |
-|------|------|-------------|--------------|-------------------|
+| Area | Unit | Integration | E2E (Playwright) | Smoke (deployed) |
+|------|------|-------------|------------------|-------------------|
 | Profile CRUD (backend) | Yes | Yes | Yes | Yes |
 | Input validation | Yes | — | Yes | — |
 | Station search | Yes | — | Yes | — |
@@ -277,7 +317,7 @@ Run these against the live AWS environment after each deployment. These require 
 
 ## 6. Known Gaps
 
-- **No automated frontend tests.** The E2E script above is manual. Consider adding Playwright test specs in `frontend/e2e/` for CI.
+- **E2E tests are not yet in CI.** Playwright tests exist in `frontend/e2e/` but require a running local dev stack (DynamoDB Local + backend + frontend). Consider adding a CI job that spins up the stack and runs `npm run test:e2e -- --headed=false`.
 - **No load/performance testing.** NFR targets (< 3 s dashboard load, < 2 s Lambda cold start) are verified by manual observation only.
 - **No cross-browser testing.** Manual tests run in a single Chromium instance. iOS Safari and Android Chrome are untested.
 - **External API failure modes** (bad Darwin key, invalid TfL key, invalid CRS) are covered by backend unit tests with mocks but not by E2E tests against real failing APIs.

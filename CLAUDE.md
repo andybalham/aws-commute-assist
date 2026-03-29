@@ -23,7 +23,13 @@ commute-dashboard/
 │   │   ├── data/           # stations.ts (static CRS lookup)
 │   │   └── types/
 │   └── Dockerfile
+├── Start-DevStack.ps1  # PowerShell: start local dev stack for E2E testing
+├── Stop-DevStack.ps1   # PowerShell: tear down local dev stack
 └── frontend/       # React + Vite + TypeScript SPA
+    ├── e2e/                # Playwright E2E tests
+    │   ├── commute-dashboard.spec.ts  # Full test suite (sections 3.1–3.10)
+    │   └── global-setup.ts            # Cleans profiles before each run
+    ├── playwright.config.ts
     └── src/
         ├── api/            # apiClient.ts, dashboardApi.ts, profilesApi.ts, types.ts
         ├── components/     # Layout.tsx, ProtectedRoute.tsx, ProfileCard.tsx, ProfileForm.tsx, StationAutocomplete.tsx, TflLineSelector.tsx
@@ -70,6 +76,7 @@ commute-dashboard/
 - The `ProfileForm` auto-mirrors outbound origin/destination to return destination/origin via explicit setter functions (not `useEffect`) to avoid stale state and unnecessary re-renders.
 - Profile CRUD mutations in `ProfilesPage` invalidate both `['profiles']` and `['dashboard']` query keys where appropriate so the UI stays consistent after activating a profile.
 - The `profilesApi` create/update functions expect `isActive` in the payload (`Omit<CommuteProfile, 'userId' | 'profileId' | 'createdAt' | 'updatedAt'>`). The form always sends `isActive: false`; activation is handled separately via the activate endpoint.
+- **Playwright selectors:** Form labels (`<label>`) in `ProfileForm`, `StationAutocomplete`, and `TflLineSelector` do not use `htmlFor` — Playwright's `getByLabel()` will not find the associated inputs. Use `getByPlaceholder()`, `locator('input[type="time"]')`, or `getByRole('checkbox', { name })` instead. TfL checkboxes are `sr-only` (visually hidden) and require `{ force: true }` for direct interaction.
 
 ### Infrastructure
 
@@ -111,7 +118,28 @@ npm test
 docker run -d --name dynamodb-local -p 8000:8000 amazon/dynamodb-local
 DYNAMODB_ENDPOINT=http://localhost:8000 npm test
 docker stop dynamodb-local && docker rm dynamodb-local
+
+# Run frontend E2E tests (requires local dev stack running — see below)
+cd frontend
+npm run test:e2e              # headed (visible browser)
+npm run test:e2e -- --headed=false  # headless
 ```
+
+### Local Dev Stack for E2E Tests
+
+The Playwright E2E tests require the full local stack: DynamoDB Local, backend, and frontend (with auth bypass).
+
+**Windows (PowerShell) — one command:**
+
+```powershell
+.\Start-DevStack.ps1          # starts everything, opens servers in new windows
+# run tests...
+.\Stop-DevStack.ps1           # stops DynamoDB, restores .env.local
+```
+
+**Bash — manual steps:** see `test-plan.md` section 3 for the full setup.
+
+The Playwright global setup (`e2e/global-setup.ts`) automatically deletes any leftover profiles before each run, ensuring tests always start from a clean state.
 
 ### Frontend Environment Variables
 
