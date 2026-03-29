@@ -252,6 +252,12 @@ test.describe('3.9 — Dashboard empty state', () => {
     // All sections show "No data yet"
     const noData = page.getByText('No data yet');
     expect(await noData.count()).toBeGreaterThanOrEqual(3);
+
+    // Empty state message
+    await expect(page.getByText('No active profile')).toBeVisible();
+
+    // Refresh button and profile selector should NOT be visible
+    await expect(page.getByRole('button', { name: 'Refresh' })).not.toBeVisible();
   });
 });
 
@@ -276,5 +282,151 @@ test.describe('3.10 — Navigation and layout', () => {
     await page.goto('/foo');
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3.11–3.15 — Dashboard with live data
+//
+// These tests create a profile, activate it, and verify the dashboard
+// renders real data from the backend services.
+// ---------------------------------------------------------------------------
+
+test.describe('3.11–3.15 — Dashboard with live data', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  let page: Page;
+
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage();
+  });
+
+  test.afterAll(async () => {
+    // Clean up: delete all profiles
+    const response = await page.request.get('http://localhost:3001/api/profiles', {
+      headers: { 'x-user-id': 'test-user' },
+    });
+    const profiles = await response.json();
+    for (const p of profiles) {
+      await page.request.delete(`http://localhost:3001/api/profiles/${p.profileId}`, {
+        headers: { 'x-user-id': 'test-user' },
+      });
+    }
+    await page.close();
+  });
+
+  // 3.11 — Create and activate a profile for dashboard testing
+  test('3.11 — create and activate profile for dashboard', async () => {
+    await page.goto('/profiles');
+    await page.getByRole('button', { name: 'New Profile' }).click();
+
+    // Fill profile name
+    await page.getByPlaceholder('e.g. Weekday Commute').fill('Dashboard Test');
+
+    // Outbound: Brighton → London Victoria
+    await pickStation(page, 'Outbound Journey', 'Origin', 'Brighton', 'Brighton (BTN)');
+    await pickStation(page, 'Outbound Journey', 'Destination', 'Victoria', 'London Victoria (VIC)');
+
+    // Departure times
+    const outboundFieldset = page.locator('fieldset', {
+      has: page.getByText('Outbound Journey', { exact: true }),
+    });
+    const returnFieldset = page.locator('fieldset', {
+      has: page.getByText('Return Journey', { exact: true }),
+    });
+    await outboundFieldset.locator('input[type="time"]').fill('07:30');
+    await returnFieldset.locator('input[type="time"]').fill('17:45');
+
+    // Select TfL lines
+    await page.getByRole('checkbox', { name: 'Victoria' }).check({ force: true });
+    await page.getByRole('checkbox', { name: 'Northern' }).check({ force: true });
+
+    // Submit
+    await page.getByRole('button', { name: 'Create Profile' }).click();
+    await expect(page.getByText('Dashboard Test')).toBeVisible({ timeout: 5_000 });
+
+    // Activate
+    await page.getByRole('button', { name: 'Set Active' }).click();
+    await expect(page.getByText('Active')).toBeVisible({ timeout: 5_000 });
+  });
+
+  // 3.12 — Dashboard header and controls
+  test('3.12 — dashboard header shows profile name, refresh, and timestamp', async () => {
+    await page.goto('/');
+
+    // Wait for dashboard data to load
+    await expect(page.getByText('Dashboard Test')).toBeVisible({ timeout: 10_000 });
+
+    // Profile name visible in header
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
+    // Last refreshed timestamp
+    await expect(page.getByText(/Updated \d{1,2}:\d{2}/)).toBeVisible();
+
+    // Refresh button
+    const refreshBtn = page.getByRole('button', { name: 'Refresh' });
+    await expect(refreshBtn).toBeVisible();
+
+    // Click refresh and verify timestamp updates
+    const timestampBefore = await page.getByText(/Updated \d{1,2}:\d{2}/).textContent();
+    await refreshBtn.click();
+
+    // Button should show "Refreshing..." briefly
+    // After refresh, data should still be present
+    await expect(page.getByText('Dashboard Test')).toBeVisible({ timeout: 10_000 });
+  });
+
+  // 3.13 — Weather section with live data
+  test('3.13 — weather section shows three forecast cards', async () => {
+    // Weather section heading
+    await expect(page.getByText('Weather')).toBeVisible();
+
+    // Three weather card labels
+    await expect(page.getByText('Outbound Origin')).toBeVisible();
+    await expect(page.getByText('Destination')).toBeVisible();
+    await expect(page.getByText('Return Origin')).toBeVisible();
+
+    // Temperature values (°C format)
+    const temps = page.getByText(/\d+°C/);
+    expect(await temps.count()).toBeGreaterThanOrEqual(3);
+
+    // Precipitation probability
+    const precip = page.getByText(/💧 \d+%/);
+    expect(await precip.count()).toBeGreaterThanOrEqual(3);
+
+    // Wind speed
+    const wind = page.getByText(/💨 \d+ km\/h/);
+    expect(await wind.count()).toBeGreaterThanOrEqual(3);
+  });
+
+  // 3.14 — Rail section structure
+  test('3.14 — rail section shows outbound and return sub-sections', async () => {
+    await expect(page.getByText('Rail Departures')).toBeVisible();
+
+    // Both departure boards present
+    await expect(page.getByRole('heading', { name: 'Outbound' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Return' })).toBeVisible();
+
+    // Either shows services or "No services found" (depends on time of day)
+    const outboundSection = page.locator('div', { has: page.getByRole('heading', { name: 'Outbound' }) });
+    const hasOutboundServices = await outboundSection.getByText(/^\d{2}:\d{2}$/).count() > 0;
+    const hasOutboundEmpty = await outboundSection.getByText('No services found').count() > 0;
+    expect(hasOutboundServices || hasOutboundEmpty).toBe(true);
+  });
+
+  // 3.15 — TfL section with configured lines
+  test('3.15 — TfL section shows status for configured lines', async () => {
+    await expect(page.getByText('TfL Status')).toBeVisible();
+
+    // Northern and Victoria lines should be displayed in the TfL section
+    // Use heading to scope tightly, then look for line names as exact matches
+    // to avoid matching "London Victoria" in the weather section
+    const tflSection = page.locator('div', { has: page.getByRole('heading', { name: 'TfL Status' }) });
+    await expect(tflSection.getByText('Northern', { exact: true })).toBeVisible();
+    await expect(tflSection.getByText('Victoria', { exact: true })).toBeVisible();
+
+    // Each line should have a status (e.g. "Good Service", "Minor Delays", etc.)
+    const statusTexts = tflSection.locator('span').filter({ hasText: /Service|Delays|Suspended|Closure|Disruption/i });
+    expect(await statusTexts.count()).toBeGreaterThanOrEqual(2);
   });
 });

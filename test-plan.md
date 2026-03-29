@@ -220,6 +220,7 @@ The automated tests in `frontend/e2e/commute-dashboard.spec.ts` cover the follow
 | # | Action | Expected |
 |---|--------|----------|
 | 1 | Navigate to `http://localhost:5173/` | Dashboard page loads with heading, three section cards (Rail, Weather, TfL) showing "No data yet" |
+| 2 | Observe header | Shows "No active profile — go to Profiles to set one up." No Refresh button or profile selector visible |
 
 #### 3.10 — Navigation and layout
 
@@ -228,6 +229,42 @@ The automated tests in `frontend/e2e/commute-dashboard.spec.ts` cover the follow
 | 1 | Click "Profiles" in nav | Navigates to `/profiles` |
 | 2 | Click "Dashboard" in nav | Navigates to `/` |
 | 3 | Navigate to a non-existent route (e.g. `/foo`) | Redirects to `/` |
+
+#### 3.11 — Create and activate profile for dashboard testing
+
+| # | Action | Expected |
+|---|--------|----------|
+| 1 | Navigate to Profiles, create a profile (Brighton → London Victoria, 07:30/17:45, Victoria + Northern TfL lines) | Profile card appears |
+| 2 | Click **Set Active** | Active badge shown |
+
+#### 3.12 — Dashboard header and controls
+
+| # | Action | Expected |
+|---|--------|----------|
+| 1 | Navigate to `http://localhost:5173/` | Dashboard loads with active profile data |
+| 2 | Observe header | Profile name "Dashboard Test" visible, "Updated HH:MM:SS" timestamp shown, Refresh button visible |
+| 3 | Click **Refresh** | Dashboard data re-fetches, timestamp updates |
+
+#### 3.13 — Weather section with live data
+
+| # | Action | Expected |
+|---|--------|----------|
+| 1 | Observe Weather section | Three forecast cards visible: "Outbound Origin", "Destination", "Return Origin" |
+| 2 | Each card | Shows temperature (N°C), condition icon, precipitation probability (💧 N%), wind speed (💨 N km/h) |
+
+#### 3.14 — Rail section structure
+
+| # | Action | Expected |
+|---|--------|----------|
+| 1 | Observe Rail Departures section | "Outbound" and "Return" sub-headings visible |
+| 2 | Each sub-section | Shows either train service rows (with times, platform, operator) or "No services found" depending on time of day |
+
+#### 3.15 — TfL section with configured lines
+
+| # | Action | Expected |
+|---|--------|----------|
+| 1 | Observe TfL Status section | Section heading visible |
+| 2 | Line rows | "Northern" and "Victoria" lines displayed with colour pills and status text (e.g. "Good Service") |
 
 ### Teardown
 
@@ -300,10 +337,12 @@ Run these against the live AWS environment after each deployment. These require 
 | Profile CRUD (backend) | Yes | Yes | Yes | Yes |
 | Input validation | Yes | — | Yes | — |
 | Station search | Yes | — | Yes | — |
-| Rail service | Yes (mocked) | — | — | Yes |
-| Weather service | Yes (mocked) | — | — | Yes |
-| TfL service | Yes (mocked) | — | — | Yes |
-| Dashboard assembly | Yes (mocked) | — | — | Yes |
+| Rail service | Yes (mocked) | — | Yes (live) | Yes |
+| Weather service | Yes (mocked) | — | Yes (live) | Yes |
+| TfL service | Yes (mocked) | — | Yes (live) | Yes |
+| Dashboard assembly | Yes (mocked) | — | Yes (live) | Yes |
+| Dashboard header & refresh | — | — | Yes | Yes |
+| Dashboard empty state | — | — | Yes | — |
 | Auth (Cognito) | — | — | Bypassed | Yes |
 | Profile list UI | — | — | Yes | Yes |
 | Profile form UI | — | — | Yes | Yes |

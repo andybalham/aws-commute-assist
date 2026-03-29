@@ -321,38 +321,38 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 
 #### Data fetching
 
-- [ ] Fetch dashboard data via React Query (`useQuery`) with a 5-minute `staleTime` and `refetchInterval` (DASH-03)
-- [ ] Show a loading skeleton for each section card while data is in flight
-- [ ] Show a per-section error state if the API response includes an `error` field for that section (DASH-04, NFR-05)
+- [x] Fetch dashboard data via React Query (`useQuery`) with a 5-minute `staleTime` and `refetchInterval` (DASH-03)
+- [x] Show a loading skeleton for each section card while data is in flight
+- [x] Show a per-section error state if the API response includes an `error` field for that section (DASH-04, NFR-05)
 
 #### Rail section
 
-- [ ] Display outbound and return departure boards as separate sub-sections
-- [ ] Each service row shows: scheduled time, expected time (highlighted if delayed/cancelled), platform, operator, and calling points summary (RAIL-03)
-- [ ] Status badge: green "On Time", amber "Delayed", red "Cancelled" (RAIL-04)
-- [ ] Disruption/service messages rendered prominently above the departure list if present (RAIL-05)
+- [x] Display outbound and return departure boards as separate sub-sections
+- [x] Each service row shows: scheduled time, expected time (highlighted if delayed/cancelled), platform, operator, and calling points summary (RAIL-03)
+- [x] Status badge: green "On Time", amber "Delayed", red "Cancelled" (RAIL-04)
+- [x] Disruption/service messages rendered prominently above the departure list if present (RAIL-05)
 
 #### Weather section
 
-- [ ] Three weather cards: outbound origin, destination at arrival, return origin (WX-01, WX-02, WX-03)
-- [ ] Each card shows condition icon (mapped from WMO code), temperature, precipitation probability, wind speed (WX-04)
+- [x] Three weather cards: outbound origin, destination at arrival, return origin (WX-01, WX-02, WX-03)
+- [x] Each card shows condition icon (mapped from WMO code), temperature, precipitation probability, wind speed (WX-04)
 
 #### TfL section
 
-- [ ] Rendered only when the active profile has TfL lines configured (TFL-01)
-- [ ] One status row per configured line: line colour pill, line name, status text, reason text if present (TFL-02, TFL-03)
+- [x] Rendered only when the active profile has TfL lines configured (TFL-01)
+- [x] One status row per configured line: line colour pill, line name, status text, reason text if present (TFL-02, TFL-03)
 
 #### Dashboard header
 
-- [ ] Profile name and active profile selector (dropdown to switch active profile inline without navigating to the profiles page)
-- [ ] "Last refreshed" timestamp (DASH-02)
-- [ ] Manual refresh button that triggers a React Query refetch (DASH-02)
+- [x] Profile name and active profile selector (dropdown to switch active profile inline without navigating to the profiles page)
+- [x] "Last refreshed" timestamp (DASH-02)
+- [x] Manual refresh button that triggers a React Query refetch (DASH-02)
 
 #### Responsive layout
 
-- [ ] Desktop (≥1024px): Rail, Weather, TfL sections displayed in a multi-column grid
-- [ ] Tablet (768px–1023px): two-column layout, TfL below
-- [ ] Mobile (<768px): single column, sections stacked; departure board rows condensed (NFR-07, DASH-05)
+- [x] Desktop (≥1024px): Rail, Weather, TfL sections displayed in a multi-column grid
+- [x] Tablet (768px–1023px): two-column layout, TfL below
+- [x] Mobile (<768px): single column, sections stacked; departure board rows condensed (NFR-07, DASH-05)
 
 ### Verification
 
