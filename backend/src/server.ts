@@ -1,8 +1,10 @@
 import express from 'express';
+import cors from 'cors';
 import { config } from './config';
 import { routeRequest } from './router';
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 app.all('/{*path}', async (req, res) => {

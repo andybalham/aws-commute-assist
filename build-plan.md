@@ -287,20 +287,20 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 
 #### Profile list
 
-- [ ] Fetch profiles via React Query (`useQuery`) on page load
-- [ ] Display each profile as a card showing name, outbound leg summary, return leg summary, and active status badge
-- [ ] "Set active" button calls `PATCH /api/profiles/:id/activate` and invalidates the profiles query
-- [ ] "Edit" button opens the profile form pre-populated with the profile's data
-- [ ] "Delete" button shows a confirmation prompt then calls `DELETE /api/profiles/:id`
+- [x] Fetch profiles via React Query (`useQuery`) on page load
+- [x] Display each profile as a card showing name, outbound leg summary, return leg summary, and active status badge
+- [x] "Set active" button calls `PATCH /api/profiles/:id/activate` and invalidates the profiles query
+- [x] "Edit" button opens the profile form pre-populated with the profile's data
+- [x] "Delete" button shows a confirmation prompt then calls `DELETE /api/profiles/:id`
 
 #### Profile form (create & edit)
 
-- [ ] Form fields: profile name, outbound origin station, outbound destination station, outbound departure time (HH:MM picker), return departure time (HH:MM picker)
-- [ ] Station inputs use a debounced autocomplete component that calls `GET /api/stations?q=` and renders a dropdown of matches (CFG-04)
-- [ ] TfL line multi-select: rendered only when the destination station is a London terminus (CFG-08); displays all available TfL line options (hardcoded list of line IDs + display names) as a checkbox group
-- [ ] Client-side validation mirrors backend validation rules; inline error messages per field
-- [ ] On submit, calls `POST /api/profiles` (create) or `PUT /api/profiles/:id` (edit); invalidates the profiles query on success
-- [ ] Loading and error states handled for all async operations
+- [x] Form fields: profile name, outbound origin station, outbound destination station, outbound departure time (HH:MM picker), return departure time (HH:MM picker)
+- [x] Station inputs use a debounced autocomplete component that calls `GET /api/stations?q=` and renders a dropdown of matches (CFG-04)
+- [x] TfL line multi-select: rendered only when the destination station is a London terminus (CFG-08); displays all available TfL line options (hardcoded list of line IDs + display names) as a checkbox group
+- [x] Client-side validation mirrors backend validation rules; inline error messages per field
+- [x] On submit, calls `POST /api/profiles` (create) or `PUT /api/profiles/:id` (edit); invalidates the profiles query on success
+- [x] Loading and error states handled for all async operations
 
 ### Verification
 

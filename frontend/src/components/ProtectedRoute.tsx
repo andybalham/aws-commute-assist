@@ -2,14 +2,20 @@ import { useEffect } from 'react';
 import { signInWithRedirect } from 'aws-amplify/auth';
 import { useAuth } from '../hooks/useAuth';
 
+const DEV_BYPASS_AUTH = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
+
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!DEV_BYPASS_AUTH && !isLoading && !isAuthenticated) {
       signInWithRedirect();
     }
   }, [isLoading, isAuthenticated]);
+
+  if (DEV_BYPASS_AUTH) {
+    return <>{children}</>;
+  }
 
   if (isLoading || !isAuthenticated) {
     return (

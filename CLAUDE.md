@@ -26,7 +26,7 @@ commute-dashboard/
 └── frontend/       # React + Vite + TypeScript SPA
     └── src/
         ├── api/            # apiClient.ts, dashboardApi.ts, profilesApi.ts, types.ts
-        ├── components/     # Layout.tsx, ProtectedRoute.tsx
+        ├── components/     # Layout.tsx, ProtectedRoute.tsx, ProfileCard.tsx, ProfileForm.tsx, StationAutocomplete.tsx, TflLineSelector.tsx
         ├── hooks/          # useAuth.ts
         ├── pages/          # DashboardPage.tsx, ProfilesPage.tsx
         └── amplify-config.ts
@@ -65,6 +65,11 @@ commute-dashboard/
 - React Query (`@tanstack/react-query`) is the data-fetching layer; the `QueryClientProvider` wraps the app in `main.tsx`.
 - Routing uses `react-router-dom` with a `Layout` component (nav + `<Outlet />`) nested under `ProtectedRoute`.
 - Tailwind CSS v4 is used via the `@tailwindcss/vite` plugin — no `tailwind.config.js` or `postcss.config.js` needed; `index.css` uses `@import "tailwindcss"`.
+- The `StationAutocomplete` component uses a 300 ms debounce on the search query before calling the backend `/api/stations?q=` endpoint. It closes the dropdown on outside clicks via a `mousedown` event listener.
+- The `TflLineSelector` component and `isLondonTerminus()` helper live in `TflLineSelector.tsx`. London terminus CRS codes are hardcoded in the frontend — if new termini are added, update the `LONDON_TERMINI` set there.
+- The `ProfileForm` auto-mirrors outbound origin/destination to return destination/origin via explicit setter functions (not `useEffect`) to avoid stale state and unnecessary re-renders.
+- Profile CRUD mutations in `ProfilesPage` invalidate both `['profiles']` and `['dashboard']` query keys where appropriate so the UI stays consistent after activating a profile.
+- The `profilesApi` create/update functions expect `isActive` in the payload (`Omit<CommuteProfile, 'userId' | 'profileId' | 'createdAt' | 'updatedAt'>`). The form always sends `isActive: false`; activation is handled separately via the activate endpoint.
 
 ### Infrastructure
 
