@@ -13,6 +13,7 @@ import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigatewayv2Integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as apigatewayv2Authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 
+
 export interface InfraStackProps extends cdk.StackProps {
   envName: string; // 'dev' | 'prod'
 }
@@ -23,6 +24,10 @@ export class InfraStack extends cdk.Stack {
 
     const { envName } = props;
     const prefix = `commute-${envName}`;
+
+    // ─── Resource Tags ─────────────────────────────────────────
+    cdk.Tags.of(this).add('Project', 'commute-dashboard');
+    cdk.Tags.of(this).add('Environment', envName);
 
     // ─── Cognito ───────────────────────────────────────────────
 
@@ -298,6 +303,12 @@ export class InfraStack extends cdk.Stack {
       value: backendFn.functionName,
       description: 'Backend Lambda function name',
       exportName: `${prefix}-lambda-function`,
+    });
+
+    new cdk.CfnOutput(this, 'CloudFrontDistributionId', {
+      value: distribution.distributionId,
+      description: 'CloudFront distribution ID (for cache invalidation)',
+      exportName: `${prefix}-cloudfront-distribution-id`,
     });
   }
 }

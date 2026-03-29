@@ -373,20 +373,20 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 
 #### Backend deployment
 
-- [ ] Write a `deploy-backend.sh` script (or npm script) that: runs `docker build`, tags the image with the ECR repository URI + a version tag (e.g., git SHA), runs `docker push` to ECR, and calls `aws lambda update-function-code` to point the Lambda at the new image
+- [x] Write a `deploy-backend.sh` script (or npm script) that: runs `docker build`, tags the image with the ECR repository URI + a version tag (e.g., git SHA), runs `docker push` to ECR, and calls `aws lambda update-function-code` to point the Lambda at the new image
 - [ ] Confirm the Lambda cold-start time is within the NFR-02 target (<2 s) — test by invoking immediately after an update
-- [ ] Store all secrets (Darwin key, TfL keys) in SSM Parameter Store (`SecureString`); confirm the Lambda reads them correctly at startup via `config.ts`
+- [x] Store all secrets (Darwin key, TfL keys) in SSM Parameter Store (`SecureString`); confirm the Lambda reads them correctly at startup via `config.ts`
 
 #### Frontend deployment
 
-- [ ] Write a `deploy-frontend.sh` script (or npm script) that: injects the CDK stack outputs (`VITE_*` env vars) into the Vite build environment, runs `npm run build`, syncs `dist/` to the S3 bucket (`aws s3 sync`), and creates a CloudFront invalidation for `/*`
+- [x] Write a `deploy-frontend.sh` script (or npm script) that: injects the CDK stack outputs (`VITE_*` env vars) into the Vite build environment, runs `npm run build`, syncs `dist/` to the S3 bucket (`aws s3 sync`), and creates a CloudFront invalidation for `/*`
 - [ ] Confirm the deployed frontend loads, authenticates via the Hosted UI, and displays live dashboard data
 
 #### CDK finalisation
 
-- [ ] Review all CDK constructs for production readiness: deletion policies on DynamoDB (retain), S3 (retain), log retention on Lambda
+- [x] Review all CDK constructs for production readiness: deletion policies on DynamoDB (retain), S3 (retain), log retention on Lambda
 - [ ] Confirm `cdk diff` shows no unexpected drift between local definition and deployed stack
-- [ ] Tag all CDK resources with project and environment tags
+- [x] Tag all CDK resources with project and environment tags
 
 #### Smoke test checklist
 

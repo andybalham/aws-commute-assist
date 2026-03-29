@@ -22,10 +22,12 @@ commute-dashboard/
 │   │   ├── db/             # DynamoDB client + profilesRepository
 │   │   ├── data/           # stations.ts (static CRS lookup)
 │   │   └── types/
+│   ├── deploy.mjs           # Backend deploy script (npm run deploy)
 │   └── Dockerfile
 ├── Start-DevStack.ps1  # PowerShell: start local dev stack for E2E testing
 ├── Stop-DevStack.ps1   # PowerShell: tear down local dev stack
 └── frontend/       # React + Vite + TypeScript SPA
+    ├── deploy.mjs           # Frontend deploy script (npm run deploy)
     ├── e2e/                # Playwright E2E tests
     │   ├── commute-dashboard.spec.ts  # Full test suite (sections 3.1–3.10)
     │   └── global-setup.ts            # Cleans profiles before each run
@@ -183,11 +185,29 @@ npm run build
 cdk deploy --all            # defaults to dev; use -c env=prod for production
 
 # Backend (after CDK deploy)
-./deploy-backend.sh         # docker build → ECR push → lambda update-function-code
+cd backend
+npm run deploy              # docker build → ECR push → lambda update-function-code
+npm run deploy:prod         # same, targeting prod environment
 
 # Frontend (after CDK deploy — injects CDK outputs as VITE_* vars)
-./deploy-frontend.sh        # vite build → s3 sync → cloudfront invalidation
+cd frontend
+npm run deploy              # vite build → s3 sync → cloudfront invalidation
+npm run deploy:prod         # same, targeting prod environment
 ```
+
+### How the deploy scripts work
+
+Both `backend/deploy.mjs` and `frontend/deploy.mjs` are Node.js scripts (no bash/shell dependency) that follow the same pattern:
+
+1. Read CDK stack outputs from CloudFormation (stack name derived from env: `commute-dev` / `commute-prod`)
+2. Parse the JSON outputs natively in Node.js
+3. Perform the deployment steps (build, push, update) via `child_process.execSync`
+
+The scripts are invoked via npm scripts (`npm run deploy` / `npm run deploy:prod`) which call `node deploy.mjs <env>`. A root `package.json` provides convenience scripts to deploy both backend and frontend together.
+
+### CDK resource tags and log retention
+
+All CDK resources are tagged with `Project: commute-dashboard` and `Environment: <env>`. Lambda log groups are configured with 1-month retention (previously defaulted to infinite). Deletion policies for DynamoDB, S3, ECR, and Cognito are all set to `RETAIN`.
 
 ### Docker Image Requirements
 

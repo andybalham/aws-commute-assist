@@ -1,0 +1,14 @@
+{
+  "name": "commute-dashboard",
+  "private": true,
+  "scripts": {
+    "deploy": "npm run deploy:backend && npm run deploy:frontend",
+    "deploy:prod": "npm run deploy:backend:prod && npm run deploy:frontend:prod",
+    "deploy:backend": "cd backend && npm run deploy",
+    "deploy:backend:prod": "cd backend && npm run deploy:prod",
+    "deploy:frontend": "cd frontend && npm run deploy",
+    "deploy:frontend:prod": "cd frontend && npm run deploy:prod",
+    "deploy:infra": "cd infra && npm run build && npx cdk deploy --all",
+    "deploy:infra:prod": "cd infra && npm run build && npx cdk deploy --all -c env=prod"
+  }
+}
