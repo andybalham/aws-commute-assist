@@ -51,6 +51,7 @@ run('npm run build', {
     VITE_COGNITO_DOMAIN: cognitoDomain,
     VITE_API_URL: apiUrl,
     VITE_REDIRECT_URL: `${cloudfrontUrl}/callback`,
+    VITE_DEV_BYPASS_AUTH: 'false',
   },
 });
 

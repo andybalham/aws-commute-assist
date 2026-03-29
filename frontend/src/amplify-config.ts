@@ -11,7 +11,7 @@ export function configureAmplify() {
             domain: import.meta.env.VITE_COGNITO_DOMAIN,
             scopes: ['openid', 'email', 'profile'],
             redirectSignIn: [import.meta.env.VITE_REDIRECT_URL],
-            redirectSignOut: [import.meta.env.VITE_REDIRECT_URL],
+            redirectSignOut: [import.meta.env.VITE_REDIRECT_URL.replace(/\/callback$/, '')],
             responseType: 'code',
           },
         },

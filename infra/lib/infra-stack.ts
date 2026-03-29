@@ -234,10 +234,16 @@ export class InfraStack extends cdk.Stack {
       backendFn,
     );
 
-    // Proxy route — all requests go to Lambda
+    // Proxy route — all requests go to Lambda (OPTIONS excluded so API Gateway handles CORS preflight)
     httpApi.addRoutes({
       path: '/{proxy+}',
-      methods: [apigatewayv2.HttpMethod.ANY],
+      methods: [
+        apigatewayv2.HttpMethod.GET,
+        apigatewayv2.HttpMethod.POST,
+        apigatewayv2.HttpMethod.PUT,
+        apigatewayv2.HttpMethod.PATCH,
+        apigatewayv2.HttpMethod.DELETE,
+      ],
       integration: lambdaIntegration,
       authorizer: jwtAuthorizer,
     });
