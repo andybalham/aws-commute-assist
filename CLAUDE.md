@@ -88,6 +88,7 @@ commute-dashboard/
 
 ### Infrastructure
 
+- The CDK stack is named `CommuteDashboard-<env>` (e.g., `CommuteDashboard-dev`, `CommuteDashboard-prod`). This is the CloudFormation stack name used in all `aws cloudformation` commands and deploy scripts.
 - All AWS resources are defined as CDK constructs in `infra/`; no manual console provisioning (Cognito user creation excepted).
 - CDK stacks are parameterised for `dev` and `prod` environments.
 - S3 bucket has public access blocked; CloudFront is the only public entry point.
@@ -164,7 +165,7 @@ The frontend requires these `VITE_*` variables in `frontend/.env.local`:
 To retrieve CDK outputs:
 
 ```bash
-aws cloudformation describe-stacks --stack-name commute-dev --query "Stacks[0].Outputs" --output table
+aws cloudformation describe-stacks --stack-name CommuteDashboard-dev --query "Stacks[0].Outputs" --output table
 ```
 
 ### Cognito OAuth Callback URLs
@@ -199,7 +200,7 @@ npm run deploy:prod         # same, targeting prod environment
 
 Both `backend/deploy.mjs` and `frontend/deploy.mjs` are Node.js scripts (no bash/shell dependency) that follow the same pattern:
 
-1. Read CDK stack outputs from CloudFormation (stack name derived from env: `commute-dev` / `commute-prod`)
+1. Read CDK stack outputs from CloudFormation (stack name derived from env: `CommuteDashboard-dev` / `CommuteDashboard-prod`)
 2. Parse the JSON outputs natively in Node.js
 3. Perform the deployment steps (build, push, update) via `child_process.execSync`
 
