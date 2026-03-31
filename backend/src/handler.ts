@@ -3,10 +3,12 @@ import {
   APIGatewayProxyResultV2,
 } from 'aws-lambda';
 import { routeRequest } from './router';
+import { initConfig } from './config';
 
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
+  await initConfig();
   const userId =
     (event.requestContext.authorizer?.jwt?.claims?.sub as string) || 'unknown';
 

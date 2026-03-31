@@ -38,7 +38,7 @@ export interface DashboardResponse {
   weather: {
     outboundOrigin: WeatherSummary | null;
     destination: WeatherSummary | null;
-    returnOrigin: WeatherSummary | null;
+    returnDestination: WeatherSummary | null;
     error?: string;
   };
   tfl: {

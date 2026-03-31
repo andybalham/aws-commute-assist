@@ -192,16 +192,22 @@ function DepartureBoard({
   label,
   services,
   messages,
+  error,
+  onRetry,
 }: {
   label: string;
   services: TrainService[];
   messages: string[];
+  error?: string;
+  onRetry: () => void;
 }) {
   return (
     <div>
       <h3 className="text-sm font-medium text-gray-700 mb-2">{label}</h3>
       <ServiceMessages messages={messages} />
-      {services.length === 0 ? (
+      {error ? (
+        <SectionError message={error} onRetry={onRetry} />
+      ) : services.length === 0 ? (
         <p className="text-sm text-gray-400">No services found</p>
       ) : (
         <div className="space-y-2">
@@ -215,13 +221,10 @@ function DepartureBoard({
 }
 
 function RailSection({ rail, onRetry }: { rail: DashboardResponse['rail']; onRetry: () => void }) {
-  if (rail.error) {
-    return <SectionError message={rail.error} onRetry={onRetry} />;
-  }
   return (
     <div className="space-y-5">
-      <DepartureBoard label="Outbound" services={rail.outbound.services} messages={rail.outbound.messages} />
-      <DepartureBoard label="Return" services={rail.return.services} messages={rail.return.messages} />
+      <DepartureBoard label="Outbound" services={rail.outbound.services} messages={rail.outbound.messages} error={rail.outbound.error} onRetry={onRetry} />
+      <DepartureBoard label="Return" services={rail.return.services} messages={rail.return.messages} error={rail.return.error} onRetry={onRetry} />
     </div>
   );
 }
@@ -264,7 +267,7 @@ function WeatherSection({ weather, onRetry }: { weather: DashboardResponse['weat
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <WeatherCard weather={weather.outboundOrigin} label="Outbound Origin" />
       <WeatherCard weather={weather.destination} label="Destination" />
-      <WeatherCard weather={weather.returnOrigin} label="Return Origin" />
+      <WeatherCard weather={weather.returnDestination} label="Return Destination" />
     </div>
   );
 }

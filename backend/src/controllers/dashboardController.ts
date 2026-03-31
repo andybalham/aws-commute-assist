@@ -50,7 +50,7 @@ export async function getDashboard(ctx: RouteContext): Promise<RouteResponse> {
       todayAt(profile.outbound.departureTime)
     ),
     getWeatherForecast(
-      profile.return.originCRS,
+      profile.return.destinationCRS,
       todayAt(profile.return.departureTime)
     ),
     profile.tflLines.length > 0
@@ -97,7 +97,7 @@ export async function getDashboard(ctx: RouteContext): Promise<RouteResponse> {
         weatherDestResult.status === 'fulfilled'
           ? weatherDestResult.value
           : null,
-      returnOrigin:
+      returnDestination:
         weatherReturnResult.status === 'fulfilled'
           ? weatherReturnResult.value
           : null,

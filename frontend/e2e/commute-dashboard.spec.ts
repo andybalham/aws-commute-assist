@@ -384,7 +384,7 @@ test.describe('3.11–3.15 — Dashboard with live data', () => {
     // Three weather card labels
     await expect(page.getByText('Outbound Origin')).toBeVisible();
     await expect(page.getByText('Destination')).toBeVisible();
-    await expect(page.getByText('Return Origin')).toBeVisible();
+    await expect(page.getByText('Return Destination')).toBeVisible();
 
     // Temperature values (°C format)
     const temps = page.getByText(/\d+°C/);

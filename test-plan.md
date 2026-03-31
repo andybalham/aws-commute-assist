@@ -249,7 +249,7 @@ The automated tests in `frontend/e2e/commute-dashboard.spec.ts` cover the follow
 
 | # | Action | Expected |
 |---|--------|----------|
-| 1 | Observe Weather section | Three forecast cards visible: "Outbound Origin", "Destination", "Return Origin" |
+| 1 | Observe Weather section | Three forecast cards visible: "Outbound Origin", "Destination", "Return Destination" |
 | 2 | Each card | Shows temperature (N°C), condition icon, precipitation probability (💧 N%), wind speed (💨 N km/h) |
 
 #### 3.14 — Rail section structure

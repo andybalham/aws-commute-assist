@@ -150,6 +150,23 @@ The Playwright E2E tests require the full local stack: DynamoDB Local, backend, 
 
 The Playwright global setup (`e2e/global-setup.ts`) automatically deletes any leftover profiles before each run, ensuring tests always start from a clean state.
 
+### Stale Node Processes on Windows
+
+On Windows, stopping `nodemon` or closing a terminal window does not always kill the underlying `node` process. A stale process can hold a port (e.g., 3001) so that a new server start **silently fails to bind** — `curl` then hits the zombie process running old code, producing confusing errors with no log output from your latest changes.
+
+To check and fix:
+
+```powershell
+# Find what owns the port
+Get-NetTCPConnection -LocalPort 3001 | Select-Object OwningProcess
+# See the command line
+Get-CimInstance Win32_Process -Filter 'ProcessId=<PID>' | Select-Object CommandLine
+# Kill it
+Stop-Process -Id <PID> -Force
+```
+
+`Stop-DevStack.ps1` should handle this, but if you started the backend manually outside the script, check for orphaned processes when behaviour seems stale.
+
 ### Frontend Environment Variables
 
 The frontend requires these `VITE_*` variables in `frontend/.env.local`:

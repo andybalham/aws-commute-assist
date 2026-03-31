@@ -79,7 +79,7 @@ describe('dashboardController', () => {
     expect(body.rail.return).toBeDefined();
     expect(body.weather.outboundOrigin).toBeDefined();
     expect(body.weather.destination).toBeDefined();
-    expect(body.weather.returnOrigin).toBeDefined();
+    expect(body.weather.returnDestination).toBeDefined();
     expect(body.tfl.lines).toHaveLength(1);
     expect(body.lastRefreshed).toBeDefined();
   });

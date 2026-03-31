@@ -50,17 +50,18 @@ export interface DashboardResponse {
     outbound: {
       services: TrainService[];
       messages: string[];
+      error?: string;
     };
     return: {
       services: TrainService[];
       messages: string[];
+      error?: string;
     };
-    error?: string;
   };
   weather: {
     outboundOrigin: WeatherSummary | null;
     destination: WeatherSummary | null;
-    returnOrigin: WeatherSummary | null;
+    returnDestination: WeatherSummary | null;
     error?: string;
   };
   tfl: {
