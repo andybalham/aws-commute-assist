@@ -24,6 +24,7 @@ commute-dashboard/
 │   │   └── types/
 │   ├── deploy.mjs           # Backend deploy script (npm run deploy)
 │   └── Dockerfile
+├── Deploy.ps1          # PowerShell: full build & deploy (infra → backend → frontend)
 ├── Start-DevStack.ps1  # PowerShell: start local dev stack for E2E testing
 ├── Stop-DevStack.ps1   # PowerShell: tear down local dev stack
 └── frontend/       # React + Vite + TypeScript SPA
@@ -63,6 +64,7 @@ commute-dashboard/
 - All DynamoDB queries are scoped to the authenticated `userId` — a user must never be able to read or modify another user's data.
 - External API calls (rail, weather, TfL) each live in their own service module under `src/services/`. Each service is independently error-handled; a failure in one must not fail the whole dashboard response.
 - Secrets (Darwin API key, TfL keys) are stored in SSM Parameter Store and read at Lambda startup. They must never appear in logs, source code, or build artefacts.
+- **darwin-ldb-node bug:** The `darwin-ldb-node` library crashes with "Cannot read properties of undefined (reading 'service')" when the Darwin API returns no train services for a query (e.g., no services between those stations at that time). The library tries to access `result.trainServices.service` without a null check. `railService.ts` catches this specific error and returns an empty services array instead of propagating the crash.
 
 ### Frontend
 
@@ -196,6 +198,19 @@ If you change the dev server port or add a new deployment URL, update both the C
 
 ## Build & Deploy
 
+### One-command deploy (recommended)
+
+`Deploy.ps1` runs all three phases sequentially, stopping on the first failure:
+
+```powershell
+.\Deploy.ps1            # deploy dev (default)
+.\Deploy.ps1 -Env prod  # deploy prod
+```
+
+The script automatically resolves `CDK_DEFAULT_ACCOUNT` and `CDK_DEFAULT_REGION` from the AWS CLI before running CDK. Colour-coded output shows progress (cyan), successes (green), and step details (yellow).
+
+### Manual deploy (individual steps)
+
 ```bash
 # Infrastructure
 cd infra
@@ -222,6 +237,21 @@ Both `backend/deploy.mjs` and `frontend/deploy.mjs` are Node.js scripts (no bash
 3. Perform the deployment steps (build, push, update) via `child_process.execSync`
 
 The scripts are invoked via npm scripts (`npm run deploy` / `npm run deploy:prod`) which call `node deploy.mjs <env>`. A root `package.json` provides convenience scripts to deploy both backend and frontend together.
+
+### AWS credentials and CDK account resolution
+
+CDK resolves the AWS account and region from `CDK_DEFAULT_ACCOUNT` / `CDK_DEFAULT_REGION` environment variables, which it normally populates from the AWS CLI's default profile. If these aren't set, CDK fails with "Unable to resolve AWS account to use."
+
+`Deploy.ps1` handles this automatically. For manual deploys, ensure `aws sts get-caller-identity` succeeds before running `cdk deploy`.
+
+**Stale credentials after `aws login`:** If `aws login` fails with "Profile 'default' is already configured with Access Key credentials", the default profile has leftover access keys that conflict with the browser-based login flow. Fix by clearing them:
+
+```powershell
+aws configure set aws_access_key_id "" --profile default
+aws configure set aws_secret_access_key "" --profile default
+```
+
+Or edit `~\.aws\credentials` directly and remove the `[default]` section's access key lines. Then retry `aws login`.
 
 ### CDK resource tags and log retention
 
