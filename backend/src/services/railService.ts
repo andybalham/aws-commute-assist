@@ -46,12 +46,22 @@ export async function getDepartures(
   try {
     const darwin = await getDarwin();
 
-    const result = await darwin.arrivalsAndDepartures({
-      crs: originCRS,
-      filterCrs: destinationCRS,
-      filterType: 'to',
-      numRows: 20,
-    });
+    let result: any;
+    try {
+      result = await darwin.arrivalsAndDepartures({
+        crs: originCRS,
+        filterCrs: destinationCRS,
+        filterType: 'to',
+        numRows: 20,
+      });
+    } catch (darwinErr: any) {
+      // darwin-ldb-node crashes when there are no train services
+      // (accesses result.trainServices.service when trainServices is undefined)
+      if (darwinErr?.message?.includes("Cannot read properties of undefined (reading 'service')")) {
+        return { services: [], messages: [] };
+      }
+      throw darwinErr;
+    }
 
     const services: TrainService[] = [];
 
