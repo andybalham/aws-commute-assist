@@ -203,9 +203,19 @@ If you change the dev server port or add a new deployment URL, update both the C
 `Deploy.ps1` runs all three phases sequentially, stopping on the first failure:
 
 ```powershell
-.\Deploy.ps1            # deploy dev (default)
-.\Deploy.ps1 -Env prod  # deploy prod
+.\Deploy.ps1                              # deploy all (dev)
+.\Deploy.ps1 -Env prod                    # deploy all (prod)
+.\Deploy.ps1 -Only backend               # infra + backend only
+.\Deploy.ps1 -Only frontend              # infra + frontend only
+.\Deploy.ps1 -Only backend -SkipInfra    # backend only (skip CDK)
+.\Deploy.ps1 -Only frontend -SkipInfra   # frontend only (skip CDK)
 ```
+
+| Parameter | Description |
+|-----------|-------------|
+| `-Env` | Target environment: `dev` (default) or `prod` |
+| `-Only` | Deploy a single layer: `backend` or `frontend`. Infra still runs first unless `-SkipInfra` is set |
+| `-SkipInfra` | Skip the CDK infrastructure phase. Useful when only code has changed |
 
 The script automatically resolves `CDK_DEFAULT_ACCOUNT` and `CDK_DEFAULT_REGION` from the AWS CLI before running CDK. Colour-coded output shows progress (cyan), successes (green), and step details (yellow).
 

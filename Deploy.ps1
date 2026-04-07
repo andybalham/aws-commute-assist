@@ -1,27 +1,41 @@
 <#
 .SYNOPSIS
-    Builds and deploys the full Commute Dashboard stack (infra, backend, frontend).
+    Builds and deploys the Commute Dashboard stack (infra, backend, frontend).
 
 .DESCRIPTION
-    Runs the three deployment phases sequentially from the repository root:
+    Runs deployment phases sequentially from the repository root:
       1. Infrastructure — CDK build + deploy
       2. Backend — Docker build, ECR push, Lambda update
       3. Frontend — Vite build, S3 sync, CloudFront invalidation
 
-    Each phase must succeed before the next begins. Pass -Env prod for production.
+    By default all three phases run. Use -Only to deploy a single layer.
 
 .PARAMETER Env
     Target environment: dev (default) or prod.
 
+.PARAMETER Only
+    Deploy only a single layer: backend or frontend.
+    Infrastructure is always deployed first unless -SkipInfra is set.
+
+.PARAMETER SkipInfra
+    Skip the infrastructure (CDK) phase. Useful when only code has changed.
+
 .EXAMPLE
     .\Deploy.ps1
     .\Deploy.ps1 -Env prod
+    .\Deploy.ps1 -Only backend
+    .\Deploy.ps1 -Only frontend -SkipInfra
 #>
 
 [CmdletBinding()]
 param(
     [ValidateSet('dev', 'prod')]
-    [string]$Env = 'dev'
+    [string]$Env = 'dev',
+
+    [ValidateSet('backend', 'frontend')]
+    [string]$Only,
+
+    [switch]$SkipInfra
 )
 
 $ErrorActionPreference = 'Stop'
@@ -83,43 +97,63 @@ if (-not $env:CDK_DEFAULT_REGION) {
 }
 Write-Success "AWS account $($env:CDK_DEFAULT_ACCOUNT), region $($env:CDK_DEFAULT_REGION)"
 
-# ── Phase 1: Infrastructure ──────────────────────────────────────────
+$runInfra    = -not $SkipInfra -and -not $Only
+$runBackend  = -not $Only -or $Only -eq 'backend'
+$runFrontend = -not $Only -or $Only -eq 'frontend'
 
-Write-Step "Phase 1/3: Infrastructure ($Env)"
+$phases = @()
+if ($runInfra)    { $phases += 'infra' }
+if ($runBackend)  { $phases += 'backend' }
+if ($runFrontend) { $phases += 'frontend' }
+$total = $phases.Count
+$step  = 0
 
-$cdkArgs = if ($Env -eq 'prod') { '--all -c env=prod' } else { '--all' }
+# ── Infrastructure ──────────────────────────────────────────────────
 
-Invoke-Step `
-    -Description 'Compiling CDK TypeScript' `
-    -WorkingDir "$rootDir\infra" `
-    -Command 'npm run build'
+if ($runInfra) {
+    $step++
+    Write-Step "Phase $step/$total`: Infrastructure ($Env)"
 
-Invoke-Step `
-    -Description "Deploying CDK stack (CommuteDashboard-$Env)" `
-    -WorkingDir "$rootDir\infra" `
-    -Command "npx cdk deploy $cdkArgs --require-approval never"
+    $cdkArgs = if ($Env -eq 'prod') { '--all -c env=prod' } else { '--all' }
 
-# ── Phase 2: Backend ─────────────────────────────────────────────────
+    Invoke-Step `
+        -Description 'Compiling CDK TypeScript' `
+        -WorkingDir "$rootDir\infra" `
+        -Command 'npm run build'
 
-Write-Step "Phase 2/3: Backend ($Env)"
+    Invoke-Step `
+        -Description "Deploying CDK stack (CommuteDashboard-$Env)" `
+        -WorkingDir "$rootDir\infra" `
+        -Command "npx cdk deploy $cdkArgs --require-approval never"
+}
 
-$deployCmd = if ($Env -eq 'prod') { 'npm run deploy:prod' } else { 'npm run deploy' }
+# ── Backend ─────────────────────────────────────────────────────────
 
-Invoke-Step `
-    -Description 'Building and deploying backend container' `
-    -WorkingDir "$rootDir\backend" `
-    -Command $deployCmd
+if ($runBackend) {
+    $step++
+    Write-Step "Phase $step/$total`: Backend ($Env)"
 
-# ── Phase 3: Frontend ────────────────────────────────────────────────
+    $deployCmd = if ($Env -eq 'prod') { 'npm run deploy:prod' } else { 'npm run deploy' }
 
-Write-Step "Phase 3/3: Frontend ($Env)"
+    Invoke-Step `
+        -Description 'Building and deploying backend container' `
+        -WorkingDir "$rootDir\backend" `
+        -Command $deployCmd
+}
 
-$deployCmd = if ($Env -eq 'prod') { 'npm run deploy:prod' } else { 'npm run deploy' }
+# ── Frontend ────────────────────────────────────────────────────────
 
-Invoke-Step `
-    -Description 'Building and deploying frontend' `
-    -WorkingDir "$rootDir\frontend" `
-    -Command $deployCmd
+if ($runFrontend) {
+    $step++
+    Write-Step "Phase $step/$total`: Frontend ($Env)"
+
+    $deployCmd = if ($Env -eq 'prod') { 'npm run deploy:prod' } else { 'npm run deploy' }
+
+    Invoke-Step `
+        -Description 'Building and deploying frontend' `
+        -WorkingDir "$rootDir\frontend" `
+        -Command $deployCmd
+}
 
 # ── Done ─────────────────────────────────────────────────────────────
 

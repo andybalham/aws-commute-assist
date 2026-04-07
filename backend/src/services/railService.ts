@@ -1,4 +1,3 @@
-import { Darwin } from 'darwin-ldb-node';
 import { config } from '../config';
 import { TrainService } from '../types';
 
@@ -10,14 +9,15 @@ export interface DepartureSummary {
   messages: string[];
 }
 
-let darwinClient: InstanceType<typeof Darwin> | null = null;
+let darwinClient: any = null;
 let darwinKeyUsed = '';
 
-async function getDarwin(): Promise<InstanceType<typeof Darwin>> {
+async function getDarwin(): Promise<any> {
   const key = config.darwinApiKey;
   if (darwinClient && darwinKeyUsed === key) {
     return darwinClient;
   }
+  const { Darwin } = await import('darwin-ldb-node');
   darwinClient = await Darwin.make(WSDL_URL, key);
   darwinKeyUsed = key;
   return darwinClient;
