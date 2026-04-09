@@ -82,7 +82,10 @@ export async function getDashboard(ctx: RouteContext): Promise<RouteResponse> {
           returnRailResult.status === 'fulfilled'
             ? returnRailResult.value.services
             : [],
-        messages: [],
+        messages:
+          returnRailResult.status === 'fulfilled'
+            ? returnRailResult.value.messages
+            : [],
         ...(returnRailResult.status === 'rejected' && {
           error: `Rail service error: ${returnRailResult.reason?.message ?? 'Unknown error'}`,
         }),

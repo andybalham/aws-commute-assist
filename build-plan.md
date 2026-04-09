@@ -374,13 +374,13 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 #### Backend deployment
 
 - [x] Write a `deploy-backend.sh` script (or npm script) that: runs `docker build`, tags the image with the ECR repository URI + a version tag (e.g., git SHA), runs `docker push` to ECR, and calls `aws lambda update-function-code` to point the Lambda at the new image
-- [ ] Confirm the Lambda cold-start time is within the NFR-02 target (<2 s) — test by invoking immediately after an update
+- [x] Confirm the Lambda cold-start time is within the NFR-02 target (<2 s) — test by invoking immediately after an update
 - [x] Store all secrets (Darwin key, TfL keys) in SSM Parameter Store (`SecureString`); confirm the Lambda reads them correctly at startup via `config.ts`
 
 #### Frontend deployment
 
 - [x] Write a `deploy-frontend.sh` script (or npm script) that: injects the CDK stack outputs (`VITE_*` env vars) into the Vite build environment, runs `npm run build`, syncs `dist/` to the S3 bucket (`aws s3 sync`), and creates a CloudFront invalidation for `/*`
-- [ ] Confirm the deployed frontend loads, authenticates via the Hosted UI, and displays live dashboard data
+- [x] Confirm the deployed frontend loads, authenticates via the Hosted UI, and displays live dashboard data
 
 #### CDK finalisation
 

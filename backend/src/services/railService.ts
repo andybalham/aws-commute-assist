@@ -17,7 +17,11 @@ async function getDarwin(): Promise<any> {
   if (darwinClient && darwinKeyUsed === key) {
     return darwinClient;
   }
-  const { Darwin } = await import('darwin-ldb-node');
+  // Use Function() to hide the dynamic import from TypeScript's CommonJS
+  // downleveler, which would otherwise rewrite it to require() and fail at
+  // runtime because darwin-ldb-node is an ESM-only package.
+  const darwinModule: any = await (new Function('return import("darwin-ldb-node")')());
+  const { Darwin } = darwinModule;
   darwinClient = await Darwin.make(WSDL_URL, key);
   darwinKeyUsed = key;
   return darwinClient;
@@ -38,6 +42,18 @@ function isWithinWindow(
   return Math.abs(scheduled - target) <= windowMinutes;
 }
 
+/**
+ * Minutes between now and today's `HH:MM` target (can be negative if target
+ * has already passed today).
+ */
+function minutesUntilToday(targetTime: string): number {
+  const now = new Date();
+  const [h, m] = targetTime.split(':').map(Number);
+  const target = new Date(now);
+  target.setHours(h, m, 0, 0);
+  return Math.round((target.getTime() - now.getTime()) / 60000);
+}
+
 export async function getDepartures(
   originCRS: string,
   destinationCRS: string,
@@ -45,6 +61,20 @@ export async function getDepartures(
 ): Promise<DepartureSummary> {
   try {
     const darwin = await getDarwin();
+
+    // Darwin's station board is a "next departures" feed covering ~120 minutes
+    // from now. If the target departure is further out than that, none of the
+    // returned services will overlap the ±30 min target window, so short-circuit
+    // with an explanatory message instead of showing "No services found".
+    // (We intentionally don't pass Darwin's timeOffset/timeWindow parameters —
+    // doing so via darwin-ldb-node caused the SOAP call to return no services.)
+    const minsUntil = minutesUntilToday(targetTime);
+    if (minsUntil - 30 > 120) {
+      return {
+        services: [],
+        messages: ['Services will appear closer to the departure time.'],
+      };
+    }
 
     let result: any;
     try {
