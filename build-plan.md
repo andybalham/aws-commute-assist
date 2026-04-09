@@ -446,6 +446,70 @@ Full smoke test checklist passes against the deployed production environment.
 
 ---
 
+## Phase 10 — Production Custom Domain (Route 53)
+
+**Goal:** The production environment is served from a sub-domain of an existing Route 53-registered domain (e.g., `commute.example.com`) over HTTPS with a valid ACM certificate, replacing the default `*.cloudfront.net` URL. Cognito and the frontend redirect flow continue to work against the new domain.
+
+> **Prerequisites:** A public hosted zone already exists in Route 53 for the parent domain (e.g., `example.com`). The chosen sub-domain (e.g., `commute.example.com`) is not currently in use by another service.
+
+### Tasks
+
+#### Configuration & parameters
+
+- [ ] Add two new context parameters to the CDK app for the `prod` environment: `domainName` (parent zone, e.g., `example.com`) and `subdomain` (e.g., `commute`). Read them in `infra/lib/infra-stack.ts` via `this.node.tryGetContext(...)` and only apply the custom-domain constructs when both are set (so `dev` continues to deploy with the default CloudFront URL)
+- [ ] Document the new context values in `cdk.json` (or `cdk.context.json`) and in `CLAUDE.md` under the deploy section
+
+#### ACM certificate
+
+- [ ] Look up the existing Route 53 hosted zone in CDK via `HostedZone.fromLookup({ domainName })`
+- [ ] Define an ACM `DnsValidatedCertificate` (or `Certificate` with `CertificateValidation.fromDns(hostedZone)`) for `<subdomain>.<domainName>`. **The certificate must be provisioned in `us-east-1`** — CloudFront only accepts certificates from that region. Use a cross-region reference or a dedicated `us-east-1` stack if the main stack is deployed in `eu-west-2`
+- [ ] Confirm DNS validation records are created automatically in the hosted zone and the certificate reaches `ISSUED` status
+
+#### CloudFront distribution
+
+- [ ] Add the custom domain to the CloudFront distribution via `domainNames: ['<subdomain>.<domainName>']` and attach the ACM certificate via `certificate`
+- [ ] Set `minimumProtocolVersion` to `TLS_V1_2_2021` (or latest) and confirm HTTPS-only behaviour is still enforced
+- [ ] Redeploy the stack and verify the distribution shows the alternate domain name as attached
+
+#### Route 53 alias record
+
+- [ ] Define an `ARecord` (and optionally `AAAARecord` for IPv6) in the hosted zone with `recordName: subdomain` and `target: RecordTarget.fromAlias(new CloudFrontTarget(distribution))`
+- [ ] Confirm `dig <subdomain>.<domainName>` resolves to the CloudFront distribution and `https://<subdomain>.<domainName>/` loads the app
+
+#### Cognito callback URLs
+
+- [ ] Update the Cognito App Client `callbackUrls` and `logoutUrls` in CDK to include the new custom domain: `https://<subdomain>.<domainName>/callback` and `https://<subdomain>.<domainName>`
+- [ ] Keep the existing `localhost:5173` entries for local dev, and keep the raw CloudFront URL entries until the custom domain is verified working (remove them in a follow-up deploy once confirmed)
+- [ ] Redeploy the CDK stack so Cognito picks up the new allowed URLs
+
+#### Frontend build
+
+- [ ] Update `frontend/deploy.mjs` (prod path) to set `VITE_REDIRECT_URL=https://<subdomain>.<domainName>/callback` when deploying prod. Source the domain from a new CDK output (see next task) rather than hardcoding it
+- [ ] Add a new CDK output `AppUrl` (prod only) containing the full `https://<subdomain>.<domainName>` URL so `deploy.mjs` can read it from the stack outputs like the other `VITE_*` values
+- [ ] Rebuild and redeploy the frontend; confirm the bundle's Amplify config points at the custom domain redirect URL
+
+#### Optional: custom domain for the API Gateway
+
+- [ ] _(Optional)_ If a matching API sub-domain is desired (e.g., `api.commute.example.com`), provision an API Gateway custom domain name + base path mapping + Route 53 alias record. Not required — the frontend can continue to call the default `execute-api` URL. If added, update `VITE_API_URL` accordingly and redeploy the frontend
+
+#### Smoke test checklist
+
+- [ ] `https://<subdomain>.<domainName>/` loads the app over HTTPS with a valid certificate (no browser warnings)
+- [ ] Sign-in flow redirects to Cognito Hosted UI and returns to `https://<subdomain>.<domainName>/callback` successfully
+- [ ] Dashboard loads live data after sign-in
+- [ ] Sign-out returns to `https://<subdomain>.<domainName>/`
+- [ ] Direct access to the old `*.cloudfront.net` URL still works (or is intentionally removed in a follow-up)
+- [ ] `dev` environment still deploys successfully with no custom-domain context set
+
+### Verification
+
+- Production is reachable at the custom sub-domain over HTTPS with a trusted certificate
+- Full auth round-trip works against the custom domain
+- CDK diff on `dev` shows no changes (custom-domain logic is gated on context parameters and does not affect `dev`)
+- Re-running `.\Deploy.ps1 -Env prod` end-to-end produces no errors and the deployed app continues to function
+
+---
+
 ## Phase Summary
 
 | Phase | Focus                  | Key Deliverable                                              |
@@ -460,6 +524,7 @@ Full smoke test checklist passes against the deployed production environment.
 | 7     | Dashboard UI           | Live data displayed; responsive layout; error/loading states |
 | 8     | Deployment pipeline    | Build + push + deploy scripts; live end-to-end smoke test    |
 | 9     | Hardening & polish     | Resilience, security review, UX polish, documentation        |
+| 10    | Custom domain (prod)   | Prod served from Route 53 sub-domain with ACM cert over HTTPS |
 
 ---
 
