@@ -32,6 +32,35 @@ const TFL_LINE_COLOURS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Darwin API window helpers
+// ---------------------------------------------------------------------------
+//
+// Darwin's live departure board returns services for ~120 minutes from now, and
+// `railService.ts` filters those to ±30 min of the target time. So a target is
+// "outside the window" when it is either in the past or more than 150 minutes
+// in the future — in both cases an empty result is expected, not an error, so
+// we suppress the "No services found" message.
+
+function parseHHMM(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minutesUntil(departureTime: string, now: Date): number {
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  return parseHHMM(departureTime) - nowMins;
+}
+
+function isDepartureInPast(departureTime: string, now: Date): boolean {
+  return minutesUntil(departureTime, now) < 0;
+}
+
+function isOutsideDarwinWindow(departureTime: string, now: Date): boolean {
+  const delta = minutesUntil(departureTime, now);
+  return delta < 0 || delta > 150;
+}
+
+// ---------------------------------------------------------------------------
 // WMO weather code → icon + description mapping
 // ---------------------------------------------------------------------------
 
@@ -194,12 +223,14 @@ function DepartureBoard({
   messages,
   error,
   onRetry,
+  outsideWindow,
 }: {
   label: string;
   services: TrainService[];
   messages: string[];
   error?: string;
   onRetry: () => void;
+  outsideWindow: boolean;
 }) {
   return (
     <div>
@@ -208,7 +239,12 @@ function DepartureBoard({
       {error ? (
         <SectionError message={error} onRetry={onRetry} />
       ) : services.length === 0 ? (
-        <p className="text-sm text-gray-400">No services found</p>
+        // Suppress the placeholder when we're outside the Darwin window, OR when the
+        // backend already returned an explanatory message (e.g. "Services will appear
+        // closer to the departure time."). The message alone is enough context.
+        outsideWindow || messages.length > 0 ? null : (
+          <p className="text-sm text-gray-400">No services found</p>
+        )
       ) : (
         <div className="space-y-2">
           {services.map((s, i) => (
@@ -220,11 +256,40 @@ function DepartureBoard({
   );
 }
 
-function RailSection({ rail, onRetry }: { rail: DashboardResponse['rail']; onRetry: () => void }) {
+function RailSection({
+  rail,
+  profile,
+  onRetry,
+}: {
+  rail: DashboardResponse['rail'];
+  profile: CommuteProfile | undefined;
+  onRetry: () => void;
+}) {
+  const now = new Date();
+  const hideOutbound = profile ? isDepartureInPast(profile.outbound.departureTime, now) : false;
+  const outboundOutside = profile ? isOutsideDarwinWindow(profile.outbound.departureTime, now) : false;
+  const returnOutside = profile ? isOutsideDarwinWindow(profile.return.departureTime, now) : false;
+
   return (
     <div className="space-y-5">
-      <DepartureBoard label="Outbound" services={rail.outbound.services} messages={rail.outbound.messages} error={rail.outbound.error} onRetry={onRetry} />
-      <DepartureBoard label="Return" services={rail.return.services} messages={rail.return.messages} error={rail.return.error} onRetry={onRetry} />
+      {!hideOutbound && (
+        <DepartureBoard
+          label="Outbound"
+          services={rail.outbound.services}
+          messages={rail.outbound.messages}
+          error={rail.outbound.error}
+          onRetry={onRetry}
+          outsideWindow={outboundOutside}
+        />
+      )}
+      <DepartureBoard
+        label="Return"
+        services={rail.return.services}
+        messages={rail.return.messages}
+        error={rail.return.error}
+        onRetry={onRetry}
+        outsideWindow={returnOutside}
+      />
     </div>
   );
 }
@@ -482,7 +547,11 @@ export function DashboardPage() {
           {/* Rail — spans 2 columns on desktop */}
           <div className="lg:col-span-2">
             <SectionCard title="Rail Departures">
-              <RailSection rail={dashboard.rail} onRetry={handleRefresh} />
+              <RailSection
+                rail={dashboard.rail}
+                profile={profiles.find((p) => p.profileId === dashboard.profile.profileId)}
+                onRetry={handleRefresh}
+              />
             </SectionCard>
           </div>
 

@@ -385,18 +385,18 @@ Running `npm install && npm run build` (or equivalent) in each of `infra/`, `bac
 #### CDK finalisation
 
 - [x] Review all CDK constructs for production readiness: deletion policies on DynamoDB (retain), S3 (retain), log retention on Lambda
-- [ ] Confirm `cdk diff` shows no unexpected drift between local definition and deployed stack
+- [x] Confirm `cdk diff` shows no unexpected drift between local definition and deployed stack
 - [x] Tag all CDK resources with project and environment tags
 
 #### Smoke test checklist
 
-- [ ] Sign in via Hosted UI ✓
-- [ ] Create a commute profile ✓
-- [ ] Activate the profile ✓
-- [ ] Dashboard loads with real rail, weather, and (if applicable) TfL data ✓
-- [ ] Sign out ✓
-- [ ] Unauthenticated access to `/` redirects to login ✓
-- [ ] Unauthenticated API call returns 401 ✓
+- [x] Sign in via Hosted UI ✓
+- [x] Create a commute profile ✓
+- [x] Activate the profile ✓
+- [x] Dashboard loads with real rail, weather, and (if applicable) TfL data ✓
+- [x] Sign out ✓
+- [x] Unauthenticated access to `/` redirects to login ✓
+- [x] Unauthenticated API call returns 401 ✓
 
 ### Verification
 
