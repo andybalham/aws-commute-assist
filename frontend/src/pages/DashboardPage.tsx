@@ -224,6 +224,7 @@ function DepartureBoard({
   error,
   onRetry,
   outsideWindow,
+  outsideWindowNotice,
 }: {
   label: string;
   services: TrainService[];
@@ -231,11 +232,26 @@ function DepartureBoard({
   error?: string;
   onRetry: () => void;
   outsideWindow: boolean;
+  outsideWindowNotice?: string;
 }) {
+  // Fallback notice when outside the Darwin window, no services, and the backend
+  // didn't already supply an explanatory message.
+  const showOutsideNotice =
+    !error &&
+    services.length === 0 &&
+    outsideWindow &&
+    messages.length === 0 &&
+    !!outsideWindowNotice;
+
   return (
     <div>
       <h3 className="text-sm font-medium text-gray-700 mb-2">{label}</h3>
       <ServiceMessages messages={messages} />
+      {showOutsideNotice && (
+        <div className="mb-3 rounded-md bg-amber-50 border border-amber-200 p-2 text-sm text-amber-800">
+          {outsideWindowNotice}
+        </div>
+      )}
       {error ? (
         <SectionError message={error} onRetry={onRetry} />
       ) : services.length === 0 ? (
@@ -280,6 +296,7 @@ function RailSection({
           error={rail.outbound.error}
           onRetry={onRetry}
           outsideWindow={outboundOutside}
+          outsideWindowNotice="Services will appear closer to the departure time."
         />
       )}
       <DepartureBoard
