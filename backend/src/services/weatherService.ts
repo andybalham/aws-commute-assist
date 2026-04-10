@@ -39,6 +39,16 @@ function wmoToCondition(code: number): string {
   return WMO_CODES[code] ?? `Unknown (${code})`;
 }
 
+/**
+ * Fetches an hourly weather forecast for a station from Open-Meteo and returns
+ * a summary for the hour matching `isoDateTime`. The CRS is resolved to lat/lon
+ * via the static stations lookup.
+ *
+ * @param crs        National Rail CRS code identifying the station.
+ * @param isoDateTime ISO-8601 local datetime, e.g. `2026-04-10T08:00:00`.
+ * @returns Weather summary at the closest forecast hour.
+ * @throws  If the CRS is unknown, or the upstream API fails / times out (5 s).
+ */
 export async function getWeatherForecast(
   crs: string,
   isoDateTime: string

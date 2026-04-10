@@ -5,9 +5,35 @@ export interface Station {
   lon: number;
 }
 
-// Static lookup of National Rail stations — CRS code → name + coordinates.
-// Sourced from community-maintained RDG open data station list.
-// To update: replace entries from the latest NaPTAN/RDG dataset.
+// =============================================================================
+// National Rail station lookup (CRS code → name + lat/lon)
+// =============================================================================
+//
+// This file is a hand-maintained subset of UK National Rail stations covering
+// the locations exercised by the dashboard. Coordinates feed both the weather
+// service (Open-Meteo lat/lon) and the station autocomplete in the frontend.
+//
+// Source
+// ------
+// Originally seeded from the Rail Delivery Group (RDG) "Stations" open dataset
+// which is published under the Creative Commons Attribution licence. The same
+// data is also available via the NaPTAN dataset from data.gov.uk:
+//   https://www.raildeliverygroup.com/our-services/rail-data.html
+//   https://www.data.gov.uk/dataset/ff93ffc1-6656-47d8-9155-85ea0b8f2251/national-public-transport-access-nodes-naptan
+//
+// How to update
+// -------------
+// 1. Download the latest stations CSV from the RDG/NaPTAN feed.
+// 2. Filter to active National Rail stations (status = "active").
+// 3. Map each row to `{ crs, name, lat, lon }` — keep CRS uppercase.
+// 4. Replace the entries in `stationsArray` below.
+// 5. Run `npm test` in `backend/` to confirm `validation.ts` still accepts
+//    every CRS referenced by the test fixtures.
+//
+// The list does not need to be exhaustive — only stations users actually
+// configure in profiles need to be present, since validation rejects unknown
+// CRS codes at write time.
+// =============================================================================
 const stationsArray: Station[] = [
   { crs: 'ABW', name: 'Abbey Wood', lat: 51.4907, lon: 0.1203 },
   { crs: 'ABD', name: 'Aberdeen', lat: 57.1437, lon: -2.0985 },

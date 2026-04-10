@@ -21,6 +21,16 @@ const LINE_NAMES: Record<string, string> = {
   tram: 'Tram',
 };
 
+/**
+ * Fetches the current line status for one or more TfL lines via the TfL
+ * Unified API. Returns an empty array if `lineIds` is empty.
+ *
+ * @param lineIds TfL line identifiers (e.g. `['central', 'jubilee']`).
+ * @returns Array of line summaries — line ID, friendly name, status text and
+ *          (optional) reason. Length matches the number of valid IDs returned
+ *          by the upstream API.
+ * @throws  If the upstream API fails or times out (5 s).
+ */
 export async function getLineStatuses(
   lineIds: string[]
 ): Promise<TflLineSummary[]> {

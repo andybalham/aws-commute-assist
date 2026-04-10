@@ -65,6 +65,9 @@ commute-dashboard/
 - External API calls (rail, weather, TfL) each live in their own service module under `src/services/`. Each service is independently error-handled; a failure in one must not fail the whole dashboard response.
 - Secrets (Darwin API key, TfL keys) are stored in SSM Parameter Store and read at Lambda startup. They must never appear in logs, source code, or build artefacts.
 - **darwin-ldb-node bug:** The `darwin-ldb-node` library crashes with "Cannot read properties of undefined (reading 'service')" when the Darwin API returns no train services for a query (e.g., no services between those stations at that time). The library tries to access `result.trainServices.service` without a null check. `railService.ts` catches this specific error and returns an empty services array instead of propagating the crash.
+- **Outbound HTTP timeouts:** All outbound calls have a 5 s timeout. Open-Meteo and TfL use axios `timeout: 5000`. Darwin SOAP via `darwin-ldb-node` exposes no abort hook, so `railService.ts` wraps calls in a `withTimeout()` Promise.race helper. Note: the underlying SOAP call cannot be cancelled — the helper only unblocks the caller, the request may still complete in the background. This is acceptable in Lambda since the container is reused.
+- **Structured logging in `handler.ts`:** The Lambda handler emits a single-line JSON log per request via `logEvent()` — fields are `timestamp`, `level`, `userId` (Cognito `sub`), `method`, `path`, `statusCode`, `durationMs`, and on error `errorType` / `errorMessage` / `upstreamStatus`. Never add request bodies, query strings, headers, or anything beyond the Cognito `sub` to these logs — the `sub` is opaque and not PII, but other fields can be. CloudWatch Logs Insights can `parse @message` directly.
+- **dotenv log noise:** `dotenv@17.x` prints a different "tip" message (with an emoji) on every Lambda init. These are harmless but pollute the log group, and the emoji can break naive log scanners. When grepping for secrets, exclude lines containing `[dotenv@`.
 
 ### Frontend
 
@@ -87,6 +90,7 @@ commute-dashboard/
 - WMO weather condition strings from the backend are mapped to emoji icons via substring matching in `weatherIcon()`. This is intentionally loose — the backend's human-readable condition strings may vary, so the mapping checks for keywords like "rain", "clear", "snow" rather than exact matches.
 - The dashboard layout uses a `lg:grid-cols-3` grid where Rail spans 2 columns (`lg:col-span-2`) and Weather + TfL stack in the right column. On mobile/tablet it collapses to a single column. The TfL section is conditionally rendered only when the profile has TfL lines configured.
 - The backend returns HTTP 404 when no active profile exists. The dashboard detects "no active profile" by checking the profiles list rather than relying on the 404, so the empty state renders without a failed network request flash.
+- **Global keyboard focus ring:** `index.css` defines a single `:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }` rule. Tailwind v4 strips the default browser outline, so this restores a consistent indicator across all interactive elements without spamming `focus:` utilities on every component. It only fires on keyboard focus, not mouse clicks.
 
 ### Infrastructure
 
@@ -253,6 +257,20 @@ The scripts are invoked via npm scripts (`npm run deploy` / `npm run deploy:prod
 CDK resolves the AWS account and region from `CDK_DEFAULT_ACCOUNT` / `CDK_DEFAULT_REGION` environment variables, which it normally populates from the AWS CLI's default profile. If these aren't set, CDK fails with "Unable to resolve AWS account to use."
 
 `Deploy.ps1` handles this automatically. For manual deploys, ensure `aws sts get-caller-identity` succeeds before running `cdk deploy`.
+
+**AWS CLI on Windows / Git Bash gotchas:** Two unrelated issues bite when running `aws` commands from Git Bash on Windows:
+
+1. **Path conversion mangles log group names.** Git Bash's MSYS path translation rewrites arguments that look like Unix paths — so `--log-group-name /aws/lambda/commute-dev-backend` becomes `C:/Program Files/Git/aws/lambda/commute-dev-backend`, and the AWS CLI rejects it with `InvalidParameterException`. Prefix the command with `MSYS_NO_PATHCONV=1` to disable conversion for that one call.
+
+2. **`charmap` codec errors on emoji output.** AWS CLI v2 on Windows defaults to the legacy `cp1252` console encoding, so any output containing emoji (e.g. the `🔐` characters in dotenv tip messages from CloudWatch Logs) crashes with `'charmap' codec can't encode character '\U0001f510'`. The CLI fails to write *anything*, even though the data itself is fine. Set `PYTHONUTF8=1` (or `PYTHONIOENCODING=utf-8`) to force UTF-8 output.
+
+Combined example for CloudWatch log scanning:
+
+```bash
+PYTHONUTF8=1 MSYS_NO_PATHCONV=1 aws logs filter-log-events \
+  --log-group-name /aws/lambda/commute-dev-backend \
+  --max-items 200 --query "events[].message" --output json
+```
 
 **Stale credentials after `aws login`:** If `aws login` fails with "Profile 'default' is already configured with Access Key credentials", the default profile has leftover access keys that conflict with the browser-based login flow. Fix by clearing them:
 

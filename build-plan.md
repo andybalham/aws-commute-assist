@@ -412,30 +412,30 @@ Full smoke test checklist passes against the deployed production environment.
 
 #### Resilience
 
-- [ ] Add request timeouts to all outbound HTTP calls in the backend services (default: 5 s)
-- [ ] Add structured error logging in the Lambda handler (log `userId`, route, error type, and upstream status code — no PII, no API keys)
+- [x] Add request timeouts to all outbound HTTP calls in the backend services (default: 5 s)
+- [x] Add structured error logging in the Lambda handler (log `userId`, route, error type, and upstream status code — no PII, no API keys)
 - [ ] Test each external API failure mode manually (kill the Darwin key, use an invalid TfL key, pass an invalid CRS) and confirm the dashboard degrades gracefully per NFR-05
 
 #### Security review
 
-- [ ] Confirm no secrets appear in CloudWatch logs, S3 objects, CloudFront responses, or browser network responses
-- [ ] Confirm S3 bucket is not publicly accessible (direct S3 URL returns 403)
-- [ ] Confirm API Gateway rejects a request with an expired or tampered JWT
-- [ ] Confirm CORS rejects requests from origins other than the CloudFront domain
+- [x] Confirm no secrets appear in CloudWatch logs, S3 objects, CloudFront responses, or browser network responses
+- [x] Confirm S3 bucket is not publicly accessible (direct S3 URL returns 403)
+- [x] Confirm API Gateway rejects a request with an expired or tampered JWT
+- [x] Confirm CORS rejects requests from origins other than the CloudFront domain
 
 #### UX polish
 
-- [ ] Favicon and page `<title>` set appropriately
-- [ ] Loading states are smooth (skeleton loaders rather than spinners where possible)
-- [ ] Empty states: "No active profile — go to Profiles to set one up" shown on dashboard if no active profile exists
-- [ ] All interactive elements are keyboard accessible and have appropriate focus styles
+- [x] Favicon and page `<title>` set appropriately
+- [x] Loading states are smooth (skeleton loaders rather than spinners where possible)
+- [x] Empty states: "No active profile — go to Profiles to set one up" shown on dashboard if no active profile exists
+- [x] All interactive elements are keyboard accessible and have appropriate focus styles
 - [ ] Test on iOS Safari and Android Chrome in addition to desktop browsers
 
 #### Documentation
 
-- [ ] Complete `README.md` at the repo root covering: project overview, prerequisites, local dev setup instructions, environment variable reference, deployment steps
-- [ ] Add inline JSDoc comments to all backend service public functions
-- [ ] Document the CRS-to-coordinates station lookup data source and how to update it
+- [x] Complete `README.md` at the repo root covering: project overview, prerequisites, local dev setup instructions, environment variable reference, deployment steps
+- [x] Add inline JSDoc comments to all backend service public functions
+- [x] Document the CRS-to-coordinates station lookup data source and how to update it
 
 ### Verification
 

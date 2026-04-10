@@ -4,6 +4,32 @@ import { TrainService } from '../types';
 const WSDL_URL =
   'https://lite.realtime.nationalrail.co.uk/OpenLDBWS/wsdl.aspx?ver=2021-11-01';
 
+const DARWIN_TIMEOUT_MS = 5000;
+
+/**
+ * Race a promise against a timeout. If the timeout fires first, the returned
+ * promise rejects with `Error(label + " timed out after " + ms + "ms")`. The
+ * underlying operation is not cancelled — darwin-ldb-node holds an open SOAP
+ * call we cannot abort — but the caller is unblocked.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 export interface DepartureSummary {
   services: TrainService[];
   messages: string[];
@@ -54,6 +80,22 @@ function minutesUntilToday(targetTime: string): number {
   return Math.round((target.getTime() - now.getTime()) / 60000);
 }
 
+/**
+ * Fetches live departures from `originCRS` filtered to services calling at
+ * `destinationCRS`, then narrows to a ±30-minute window around `targetTime`.
+ *
+ * Darwin's `GetArrivalDepartureBoard` covers ~120 minutes from "now"; if the
+ * target is further out than that, the function short-circuits with an
+ * explanatory message rather than returning a misleading empty list.
+ *
+ * @param originCRS      CRS code of the origin station.
+ * @param destinationCRS CRS code of the destination station (used as filter).
+ * @param targetTime     `HH:MM` 24-hour local time the user expects to depart.
+ * @returns Departures matching the window, plus any informational messages.
+ * @throws  On unrecoverable Darwin errors. Times out after 5 s. The known
+ *          darwin-ldb-node "no services" crash is caught and returned as an
+ *          empty result.
+ */
 export async function getDepartures(
   originCRS: string,
   destinationCRS: string,
@@ -78,12 +120,16 @@ export async function getDepartures(
 
     let result: any;
     try {
-      result = await darwin.arrivalsAndDepartures({
-        crs: originCRS,
-        filterCrs: destinationCRS,
-        filterType: 'to',
-        numRows: 20,
-      });
+      result = await withTimeout(
+        darwin.arrivalsAndDepartures({
+          crs: originCRS,
+          filterCrs: destinationCRS,
+          filterType: 'to',
+          numRows: 20,
+        }),
+        DARWIN_TIMEOUT_MS,
+        'Darwin arrivalsAndDepartures'
+      );
     } catch (darwinErr: any) {
       // darwin-ldb-node crashes when there are no train services
       // (accesses result.trainServices.service when trainServices is undefined)
@@ -146,14 +192,22 @@ export async function getDepartures(
   }
 }
 
+/**
+ * Fetches NRCC service messages for a station. Currently returns an empty
+ * array — `darwin-ldb-node` does not surface `nrccMessages` from the SOAP
+ * response. Kept as a stable interface so the dashboard controller can wire
+ * messages through once upstream support lands. Never throws — failures are
+ * swallowed and treated as "no messages".
+ */
 export async function getServiceMessages(crs: string): Promise<string[]> {
   try {
     const darwin = await getDarwin();
 
-    const result = await darwin.arrivalsAndDepartures({
-      crs,
-      numRows: 1,
-    });
+    const result = await withTimeout(
+      darwin.arrivalsAndDepartures({ crs, numRows: 1 }),
+      DARWIN_TIMEOUT_MS,
+      'Darwin arrivalsAndDepartures'
+    );
 
     // The darwin-ldb-node package doesn't expose nrccMessages directly,
     // so we return an empty array for now
