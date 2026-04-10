@@ -42,6 +42,79 @@ async function pickStation(
   await option.click();
 }
 
+/**
+ * Returns an HH:MM string `minutesAhead` minutes from now. Used to ensure the
+ * dashboard outbound section is not auto-hidden as "in the past" when tests run.
+ */
+function futureTime(minutesAhead: number): string {
+  const t = new Date(Date.now() + minutesAhead * 60_000);
+  return `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * Returns an HH:MM string `minutesOffset` minutes from "now" using time-of-day
+ * arithmetic only (no date wrap). Returns null if the offset would cross
+ * midnight in either direction — `minutesUntil()` in DashboardPage operates on
+ * minutes-of-day only, so a wrapped time would be misclassified by the logic
+ * under test.
+ */
+function offsetTimeOfDay(minutesOffset: number): string | null {
+  const now = new Date();
+  const total = now.getHours() * 60 + now.getMinutes() + minutesOffset;
+  if (total < 0 || total > 23 * 60 + 59) return null;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+const API_URL = 'http://localhost:3001';
+
+/** Create a profile via the backend API and activate it. Returns the profileId. */
+async function createAndActivateProfile(
+  request: import('@playwright/test').APIRequestContext,
+  overrides: {
+    name: string;
+    outboundDeparture: string;
+    returnDeparture: string;
+  },
+): Promise<string> {
+  const create = await request.post(`${API_URL}/api/profiles`, {
+    data: {
+      name: overrides.name,
+      outbound: {
+        originCRS: 'BTN',
+        destinationCRS: 'VIC',
+        departureTime: overrides.outboundDeparture,
+      },
+      return: {
+        originCRS: 'VIC',
+        destinationCRS: 'BTN',
+        departureTime: overrides.returnDeparture,
+      },
+      tflLines: ['victoria', 'northern'],
+      isActive: false,
+    },
+  });
+  if (!create.ok()) {
+    throw new Error(`Failed to create profile: ${create.status()} ${await create.text()}`);
+  }
+  const { profileId } = await create.json();
+
+  const activate = await request.patch(`${API_URL}/api/profiles/${profileId}/activate`);
+  if (!activate.ok()) {
+    throw new Error(`Failed to activate profile: ${activate.status()} ${await activate.text()}`);
+  }
+  return profileId;
+}
+
+/** Delete a profile via the backend API (best-effort). */
+async function deleteProfile(
+  request: import('@playwright/test').APIRequestContext,
+  profileId: string,
+): Promise<void> {
+  await request.delete(`${API_URL}/api/profiles/${profileId}`);
+}
+
 // ---------------------------------------------------------------------------
 // 3.1 — Empty state
 // ---------------------------------------------------------------------------
@@ -334,8 +407,10 @@ test.describe('3.11–3.15 — Dashboard with live data', () => {
     const returnFieldset = page.locator('fieldset', {
       has: page.getByText('Return Journey', { exact: true }),
     });
-    await outboundFieldset.locator('input[type="time"]').fill('07:30');
-    await returnFieldset.locator('input[type="time"]').fill('17:45');
+    // Pick times in the near future so the dashboard does not auto-hide the
+    // outbound rail section as "in the past" (which would break tests 3.14+).
+    await outboundFieldset.locator('input[type="time"]').fill(futureTime(60));
+    await returnFieldset.locator('input[type="time"]').fill(futureTime(120));
 
     // Select TfL lines
     await page.getByRole('checkbox', { name: 'Victoria' }).check({ force: true });
@@ -383,7 +458,7 @@ test.describe('3.11–3.15 — Dashboard with live data', () => {
 
     // Three weather card labels
     await expect(page.getByText('Outbound Origin')).toBeVisible();
-    await expect(page.getByText('Destination')).toBeVisible();
+    await expect(page.getByText('Destination', { exact: true })).toBeVisible();
     await expect(page.getByText('Return Destination')).toBeVisible();
 
     // Temperature values (°C format)
@@ -428,5 +503,115 @@ test.describe('3.11–3.15 — Dashboard with live data', () => {
     // Each line should have a status (e.g. "Good Service", "Minor Delays", etc.)
     const statusTexts = tflSection.locator('span').filter({ hasText: /Service|Delays|Suspended|Closure|Disruption/i });
     expect(await statusTexts.count()).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3.16 — Outbound rail outside Darwin window (>150 min away)
+//
+// Verifies the DepartureBoard renders the "Services will appear closer..."
+// notice instead of services when the outbound departure is more than 150
+// minutes ahead. Skipped near midnight to avoid HH:MM wrap-around in
+// DashboardPage.minutesUntil().
+// ---------------------------------------------------------------------------
+
+test.describe('3.16 — Rail outside Darwin window', () => {
+  let profileId: string | undefined;
+
+  test.afterAll(async ({ request }) => {
+    if (profileId) await deleteProfile(request, profileId);
+  });
+
+  test('outbound shows "appear closer to departure time" notice when >150 min away', async ({
+    page,
+    request,
+  }) => {
+    const outbound = offsetTimeOfDay(180); // 3 h ahead — outside Darwin window
+    const ret = offsetTimeOfDay(240);
+    test.skip(
+      outbound === null || ret === null,
+      'Skipped: current time too close to midnight to construct a >150 min future window',
+    );
+
+    profileId = await createAndActivateProfile(request, {
+      name: 'Outside Window Test',
+      outboundDeparture: outbound!,
+      returnDeparture: ret!,
+    });
+
+    await page.goto('/');
+    // Wait for dashboard to load — scope to the header paragraph since the
+    // profile name also appears as an <option> in the profile-switcher dropdown.
+    await expect(
+      page.getByRole('paragraph').filter({ hasText: 'Outside Window Test' }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Outbound heading still rendered (not in the past)
+    const outboundHeading = page.getByRole('heading', { name: 'Outbound' });
+    await expect(outboundHeading).toBeVisible();
+
+    // Scope to the innermost div ancestor of the Outbound heading — that's the
+    // DepartureBoard wrapper. Both outbound and return fall outside the Darwin
+    // window in this test, so the same notice text appears in both sections
+    // (backend supplies it via `messages`); we need a tight scope to assert
+    // it for the outbound board specifically.
+    const outboundBoard = outboundHeading.locator('xpath=ancestor::div[1]');
+    await expect(
+      outboundBoard.getByText('Services will appear closer to the departure time.'),
+    ).toBeVisible();
+
+    // And no service rows are rendered for outbound
+    expect(await outboundBoard.getByText(/^\d{2}:\d{2}$/).count()).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3.17 — Outbound departure already in the past
+//
+// Verifies that the Outbound rail board is hidden entirely when the outbound
+// departure time is in the past, and only the Return board remains. Skipped
+// in the first few minutes after midnight where computing a "past" time
+// would wrap below 00:00.
+// ---------------------------------------------------------------------------
+
+test.describe('3.17 — Outbound departure in the past', () => {
+  let profileId: string | undefined;
+
+  test.afterAll(async ({ request }) => {
+    if (profileId) await deleteProfile(request, profileId);
+  });
+
+  test('outbound rail board is hidden when departure is in the past', async ({
+    page,
+    request,
+  }) => {
+    const outbound = offsetTimeOfDay(-30); // 30 min ago
+    // Return time must also be in a sane range. If "now" is past 22:00, +60 wraps;
+    // pick something safe inside the day.
+    const ret = offsetTimeOfDay(60) ?? offsetTimeOfDay(-1);
+    test.skip(
+      outbound === null || ret === null,
+      'Skipped: current time too close to midnight to construct a past outbound time',
+    );
+
+    profileId = await createAndActivateProfile(request, {
+      name: 'Past Departure Test',
+      outboundDeparture: outbound!,
+      returnDeparture: ret!,
+    });
+
+    await page.goto('/');
+    // Scope to header paragraph — the profile name also appears as an
+    // <option> in the profile-switcher dropdown.
+    await expect(
+      page.getByRole('paragraph').filter({ hasText: 'Past Departure Test' }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Rail Departures section is still present
+    await expect(page.getByText('Rail Departures')).toBeVisible();
+
+    // Return heading present, Outbound heading absent
+    await expect(page.getByRole('heading', { name: 'Return' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Outbound' })).toHaveCount(0);
   });
 });
