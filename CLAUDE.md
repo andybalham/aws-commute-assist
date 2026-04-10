@@ -260,6 +260,23 @@ Both are set in `infra/cdk.json`. When present, `bin/infra.ts` instantiates a se
 
 `frontend/deploy.mjs` reads `AppUrl` from the stack outputs when present and uses it for `VITE_REDIRECT_URL` — so the Amplify redirect flow targets the custom domain on prod and the default CloudFront URL on dev. `dev` produces no certificate stack, no Route 53 records, and no `AppUrl` output.
 
+**Bootstrap `us-east-1` before first prod deploy.** CDK requires every account/region pair to be bootstrapped once. The main stack lives in `eu-west-2` so that region is already bootstrapped, but the certificate stack lives in `us-east-1` (CloudFront-only requirement) and fails with `SSM parameter /cdk-bootstrap/hnb659fds/version not found` on a fresh account. Run this once:
+
+```bash
+npx cdk bootstrap aws://<account-id>/us-east-1
+```
+
+**Cross-region references rely on a CloudFormation custom resource.** With `crossRegionReferences: true` CDK injects a `Custom::CrossRegionExportReader` into the main stack that reads the ACM cert ARN from SSM in `us-east-1`. You'll see `CustomCrossRegionExportReaderCustomResourceProvider/Handler` in the deploy logs — that's expected, not a spurious Lambda.
+
+**Stacks in `ROLLBACK_COMPLETE` after a failed CREATE must be deleted, not updated.** CloudFormation will not accept updates to a stack that rolled back on its initial create. The only recovery is `aws cloudformation delete-stack` followed by a fresh deploy. Resources with `RemovalPolicy.RETAIN` (Cognito User Pool, S3 bucket, DynamoDB table, ECR repo) survive the delete as orphans — you must delete them manually before redeploying, otherwise the next `cdk deploy` will fail with name conflicts (S3 bucket names are globally unique; DynamoDB/ECR/Cognito names collide inside the account). Verify they're empty first and delete with:
+
+```bash
+aws dynamodb delete-table --table-name commute-prod-profiles --region eu-west-2
+aws s3 rb s3://commute-prod-frontend-<account-id> --force --region eu-west-2
+aws cognito-idp delete-user-pool --user-pool-id <id> --region eu-west-2
+aws ecr delete-repository --repository-name commute-prod-backend --force --region eu-west-2
+```
+
 ### How the deploy scripts work
 
 Both `backend/deploy.mjs` and `frontend/deploy.mjs` are Node.js scripts (no bash/shell dependency) that follow the same pattern:
@@ -347,13 +364,22 @@ docker stop commute-test && docker rm commute-test
 
 ### First-Time ECR Bootstrap
 
-The Lambda function references an ECR image, but the ECR repository is created by CDK. On the very first deploy:
+The Lambda function references an ECR image, but the ECR repository is created by CDK. **This applies to every new environment** — both `dev` and `prod` had to go through it. On the very first deploy of a given environment:
 
-1. Comment out the Lambda + API Gateway resources in `infra/lib/infra-stack.ts`
-2. `cdk deploy` to create ECR (and all other resources)
-3. Push a placeholder image to ECR (with `--provenance=false`)
-4. Uncomment Lambda + API Gateway resources
-5. `cdk deploy` again to create the remaining resources
+1. Comment out the Lambda + API Gateway resources in `infra/lib/infra-stack.ts` (and the `ApiGatewayUrl` + `LambdaFunctionName` outputs that reference them)
+2. `cdk deploy -c env=<env>` to create ECR (and all other resources)
+3. Build and push a backend image to the new ECR repo manually (the `npm run deploy` script can't be used yet because it expects the Lambda to exist — it calls `lambda update-function-code`). Use the explicit sequence:
+   ```bash
+   cd backend
+   docker build --platform linux/amd64 --provenance=false -t commute-<env>-backend .
+   aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin <account>.dkr.ecr.eu-west-2.amazonaws.com
+   docker tag commute-<env>-backend:latest <account>.dkr.ecr.eu-west-2.amazonaws.com/commute-<env>-backend:latest
+   docker push <account>.dkr.ecr.eu-west-2.amazonaws.com/commute-<env>-backend:latest
+   ```
+4. Uncomment Lambda + API Gateway resources and the two outputs
+5. Run the full deploy (`.\Deploy.ps1 -Env <env>`) — Lambda + API Gateway are created, backend `npm run deploy` succeeds, frontend builds with the new stack outputs and syncs to S3
+
+If you skip step 3, CloudFormation fails at `AWS::Lambda::Function` with `Source image ... does not exist` and rolls the stack back to `ROLLBACK_COMPLETE`. Recovery then requires deleting the stack *and* its retained orphans (see "Custom domain (prod)" section above for the cleanup commands) — so it's cheaper to follow the five steps in order than to try to recover from a failed initial deploy.
 
 ### AWS SDK v3 + Jest on Node 22+
 

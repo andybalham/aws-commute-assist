@@ -227,79 +227,79 @@ export class InfraStack extends cdk.Stack {
       ],
     }));
 
-    // ─── PROD BOOTSTRAP: Lambda + API Gateway temporarily commented out ───
-    // The Lambda references commute-prod-backend:latest in ECR, but the ECR
-    // repo is created by this same stack — so on the very first prod deploy
-    // there is no image yet. Deploy this stack once with the Lambda + API
-    // Gateway commented out to create the ECR repo, push a backend image,
-    // then uncomment and redeploy. See CLAUDE.md → "First-Time ECR Bootstrap".
+    // Lambda function — uses a placeholder image; updated in Phase 3 via deploy script
+    const backendFn = new lambda.DockerImageFunction(this, 'BackendFunction', {
+      functionName: `${prefix}-backend`,
+      code: lambda.DockerImageCode.fromEcr(ecrRepo, { tagOrDigest: 'latest' }),
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(30),
+      role: lambdaRole,
+      environment: {
+        DYNAMODB_TABLE_NAME: profilesTable.tableName,
+        SSM_PREFIX: `/${prefix}`,
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+      },
+    });
 
-    // const backendFn = new lambda.DockerImageFunction(this, 'BackendFunction', {
-    //   functionName: `${prefix}-backend`,
-    //   code: lambda.DockerImageCode.fromEcr(ecrRepo, { tagOrDigest: 'latest' }),
-    //   memorySize: 512,
-    //   timeout: cdk.Duration.seconds(30),
-    //   role: lambdaRole,
-    //   environment: {
-    //     DYNAMODB_TABLE_NAME: profilesTable.tableName,
-    //     SSM_PREFIX: `/${prefix}`,
-    //     AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
-    //   },
-    // });
+    // ─── API Gateway (HTTP API) ────────────────────────────────
 
-    // const httpApi = new apigatewayv2.HttpApi(this, 'HttpApi', {
-    //   apiName: `${prefix}-api`,
-    //   corsPreflight: {
-    //     allowOrigins: [
-    //       cloudfrontUrl,
-    //       ...(appUrl ? [appUrl] : []),
-    //       'http://localhost:5173',
-    //     ],
-    //     allowMethods: [
-    //       apigatewayv2.CorsHttpMethod.GET,
-    //       apigatewayv2.CorsHttpMethod.POST,
-    //       apigatewayv2.CorsHttpMethod.PUT,
-    //       apigatewayv2.CorsHttpMethod.PATCH,
-    //       apigatewayv2.CorsHttpMethod.DELETE,
-    //       apigatewayv2.CorsHttpMethod.OPTIONS,
-    //     ],
-    //     allowHeaders: ['Authorization', 'Content-Type'],
-    //     maxAge: cdk.Duration.hours(1),
-    //   },
-    // });
+    const httpApi = new apigatewayv2.HttpApi(this, 'HttpApi', {
+      apiName: `${prefix}-api`,
+      corsPreflight: {
+        allowOrigins: [
+          cloudfrontUrl,
+          ...(appUrl ? [appUrl] : []),
+          'http://localhost:5173',
+        ],
+        allowMethods: [
+          apigatewayv2.CorsHttpMethod.GET,
+          apigatewayv2.CorsHttpMethod.POST,
+          apigatewayv2.CorsHttpMethod.PUT,
+          apigatewayv2.CorsHttpMethod.PATCH,
+          apigatewayv2.CorsHttpMethod.DELETE,
+          apigatewayv2.CorsHttpMethod.OPTIONS,
+        ],
+        allowHeaders: ['Authorization', 'Content-Type'],
+        maxAge: cdk.Duration.hours(1),
+      },
+    });
 
-    // const jwtAuthorizer = new apigatewayv2Authorizers.HttpJwtAuthorizer(
-    //   'CognitoAuthorizer',
-    //   `https://cognito-idp.${this.region}.amazonaws.com/${userPool.userPoolId}`,
-    //   {
-    //     jwtAudience: [userPoolClient.userPoolClientId],
-    //     identitySource: ['$request.header.Authorization'],
-    //   },
-    // );
+    // JWT authorizer referencing Cognito
+    const jwtAuthorizer = new apigatewayv2Authorizers.HttpJwtAuthorizer(
+      'CognitoAuthorizer',
+      `https://cognito-idp.${this.region}.amazonaws.com/${userPool.userPoolId}`,
+      {
+        jwtAudience: [userPoolClient.userPoolClientId],
+        identitySource: ['$request.header.Authorization'],
+      },
+    );
 
-    // const lambdaIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
-    //   'LambdaIntegration',
-    //   backendFn,
-    // );
+    // Lambda integration
+    const lambdaIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
+      'LambdaIntegration',
+      backendFn,
+    );
 
-    // httpApi.addRoutes({
-    //   path: '/{proxy+}',
-    //   methods: [
-    //     apigatewayv2.HttpMethod.GET,
-    //     apigatewayv2.HttpMethod.POST,
-    //     apigatewayv2.HttpMethod.PUT,
-    //     apigatewayv2.HttpMethod.PATCH,
-    //     apigatewayv2.HttpMethod.DELETE,
-    //   ],
-    //   integration: lambdaIntegration,
-    //   authorizer: jwtAuthorizer,
-    // });
+    // Proxy route — all requests go to Lambda (OPTIONS excluded so API Gateway handles CORS preflight)
+    httpApi.addRoutes({
+      path: '/{proxy+}',
+      methods: [
+        apigatewayv2.HttpMethod.GET,
+        apigatewayv2.HttpMethod.POST,
+        apigatewayv2.HttpMethod.PUT,
+        apigatewayv2.HttpMethod.PATCH,
+        apigatewayv2.HttpMethod.DELETE,
+      ],
+      integration: lambdaIntegration,
+      authorizer: jwtAuthorizer,
+    });
 
-    // httpApi.addRoutes({
-    //   path: '/health',
-    //   methods: [apigatewayv2.HttpMethod.GET],
-    //   integration: lambdaIntegration,
-    // });
+    // Health endpoint without auth (useful for monitoring)
+    httpApi.addRoutes({
+      path: '/health',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: lambdaIntegration,
+    });
 
     // ─── CDK Outputs ───────────────────────────────────────────
 
@@ -317,12 +317,11 @@ export class InfraStack extends cdk.Stack {
       });
     }
 
-    // PROD BOOTSTRAP: re-enable once Lambda + API Gateway are uncommented
-    // new cdk.CfnOutput(this, 'ApiGatewayUrl', {
-    //   value: httpApi.apiEndpoint,
-    //   description: 'API Gateway endpoint URL',
-    //   exportName: `${prefix}-api-url`,
-    // });
+    new cdk.CfnOutput(this, 'ApiGatewayUrl', {
+      value: httpApi.apiEndpoint,
+      description: 'API Gateway endpoint URL',
+      exportName: `${prefix}-api-url`,
+    });
 
     new cdk.CfnOutput(this, 'UserPoolId', {
       value: userPool.userPoolId,
@@ -360,12 +359,11 @@ export class InfraStack extends cdk.Stack {
       exportName: `${prefix}-profiles-table`,
     });
 
-    // PROD BOOTSTRAP: re-enable once Lambda + API Gateway are uncommented
-    // new cdk.CfnOutput(this, 'LambdaFunctionName', {
-    //   value: backendFn.functionName,
-    //   description: 'Backend Lambda function name',
-    //   exportName: `${prefix}-lambda-function`,
-    // });
+    new cdk.CfnOutput(this, 'LambdaFunctionName', {
+      value: backendFn.functionName,
+      description: 'Backend Lambda function name',
+      exportName: `${prefix}-lambda-function`,
+    });
 
     new cdk.CfnOutput(this, 'CloudFrontDistributionId', {
       value: distribution.distributionId,
