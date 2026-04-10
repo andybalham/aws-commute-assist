@@ -1,0 +1,10 @@
+{
+  "hosted-zone:account=361728023653:domainName=10printiamcool.com:region=us-east-1": {
+    "Id": "/hostedzone/Z10325933K7690JWUN0CB",
+    "Name": "10printiamcool.com."
+  },
+  "hosted-zone:account=361728023653:domainName=10printiamcool.com:region=eu-west-2": {
+    "Id": "/hostedzone/Z10325933K7690JWUN0CB",
+    "Name": "10printiamcool.com."
+  }
+}

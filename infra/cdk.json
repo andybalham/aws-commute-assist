@@ -17,6 +17,8 @@
     ]
   },
   "context": {
+    "prod:domainName": "10printiamcool.com",
+    "prod:subdomain": "commute-dashboard",
     "@aws-cdk/aws-signer:signingProfileNamePassedToCfn": true,
     "@aws-cdk/aws-ecs-patterns:secGroupsDisablesImplicitOpenListener": true,
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,

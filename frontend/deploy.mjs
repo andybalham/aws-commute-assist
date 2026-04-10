@@ -31,6 +31,10 @@ function getOutput(outputs, key) {
   return entry.OutputValue;
 }
 
+function getOptionalOutput(outputs, key) {
+  return outputs.find(o => o.OutputKey === key)?.OutputValue;
+}
+
 console.log(`\n==> Fetching CDK stack outputs for ${stackName}...`);
 const outputs = getStackOutputs();
 
@@ -41,8 +45,10 @@ const apiUrl = getOutput(outputs, 'ApiGatewayUrl');
 const userPoolId = getOutput(outputs, 'UserPoolId');
 const clientId = getOutput(outputs, 'UserPoolClientId');
 const cognitoDomain = getOutput(outputs, 'CognitoDomain');
+const appUrl = getOptionalOutput(outputs, 'AppUrl') || cloudfrontUrl;
 
 console.log(`\n==> Building frontend with CDK outputs as VITE_* env vars...`);
+console.log(`    App URL: ${appUrl}`);
 run('npm run build', {
   env: {
     ...process.env,
@@ -50,7 +56,7 @@ run('npm run build', {
     VITE_COGNITO_APP_CLIENT_ID: clientId,
     VITE_COGNITO_DOMAIN: cognitoDomain,
     VITE_API_URL: apiUrl,
-    VITE_REDIRECT_URL: `${cloudfrontUrl}/callback`,
+    VITE_REDIRECT_URL: `${appUrl}/callback`,
     VITE_DEV_BYPASS_AUTH: 'false',
   },
 });
@@ -68,4 +74,4 @@ const invalidationId = JSON.parse(invalidationJson).Invalidation.Id;
 console.log(`\n==> Waiting for invalidation ${invalidationId}...`);
 run(`aws cloudfront wait invalidation-completed --distribution-id ${distributionId} --id ${invalidationId} --region ${region}`);
 
-console.log(`\n==> Frontend deployed successfully to ${cloudfrontUrl}`);
+console.log(`\n==> Frontend deployed successfully to ${appUrl}`);

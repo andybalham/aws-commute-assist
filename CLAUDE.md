@@ -242,6 +242,24 @@ npm run deploy              # vite build → s3 sync → cloudfront invalidation
 npm run deploy:prod         # same, targeting prod environment
 ```
 
+### Custom domain (prod)
+
+The `prod` environment is served from `commute-dashboard.10printiamcool.com` via a Route 53 alias to CloudFront, with an ACM certificate in `us-east-1`. The custom-domain logic is gated on two CDK context values and is a **no-op for `dev`**:
+
+| Context key | Value |
+|-------------|-------|
+| `prod:domainName` | `10printiamcool.com` — parent Route 53 hosted zone (must already exist) |
+| `prod:subdomain` | `commute-dashboard` — sub-domain label |
+
+Both are set in `infra/cdk.json`. When present, `bin/infra.ts` instantiates a second stack, `CommuteDashboard-prod-cert`, in `us-east-1` to provision the ACM certificate, and passes it into the main `CommuteDashboard-prod` stack via `crossRegionReferences: true`. The main stack then:
+
+- Attaches `commute-dashboard.10printiamcool.com` + the certificate to the CloudFront distribution with `TLS_V1_2_2021` minimum protocol
+- Looks up the hosted zone and creates Route 53 `A` + `AAAA` alias records pointing at the distribution
+- Adds the custom-domain URL to the Cognito App Client `callbackUrls` / `logoutUrls` and the API Gateway CORS `allowOrigins` (the raw `*.cloudfront.net` URL is kept alongside it)
+- Emits an extra `AppUrl` CloudFormation output (`https://commute-dashboard.10printiamcool.com`)
+
+`frontend/deploy.mjs` reads `AppUrl` from the stack outputs when present and uses it for `VITE_REDIRECT_URL` — so the Amplify redirect flow targets the custom domain on prod and the default CloudFront URL on dev. `dev` produces no certificate stack, no Route 53 records, and no `AppUrl` output.
+
 ### How the deploy scripts work
 
 Both `backend/deploy.mjs` and `frontend/deploy.mjs` are Node.js scripts (no bash/shell dependency) that follow the same pattern:

@@ -456,36 +456,36 @@ Full smoke test checklist passes against the deployed production environment.
 
 #### Configuration & parameters
 
-- [ ] Add two new context parameters to the CDK app for the `prod` environment: `domainName` (parent zone, e.g., `example.com`) and `subdomain` (e.g., `commute`). Read them in `infra/lib/infra-stack.ts` via `this.node.tryGetContext(...)` and only apply the custom-domain constructs when both are set (so `dev` continues to deploy with the default CloudFront URL)
-- [ ] Document the new context values in `cdk.json` (or `cdk.context.json`) and in `CLAUDE.md` under the deploy section
+- [x] Add two new context parameters to the CDK app for the `prod` environment: `domainName` (parent zone, e.g., `example.com`) and `subdomain` (e.g., `commute`). Read them in `infra/lib/infra-stack.ts` via `this.node.tryGetContext(...)` and only apply the custom-domain constructs when both are set (so `dev` continues to deploy with the default CloudFront URL)
+- [x] Document the new context values in `cdk.json` (or `cdk.context.json`) and in `CLAUDE.md` under the deploy section
 
 #### ACM certificate
 
-- [ ] Look up the existing Route 53 hosted zone in CDK via `HostedZone.fromLookup({ domainName })`
-- [ ] Define an ACM `DnsValidatedCertificate` (or `Certificate` with `CertificateValidation.fromDns(hostedZone)`) for `<subdomain>.<domainName>`. **The certificate must be provisioned in `us-east-1`** — CloudFront only accepts certificates from that region. Use a cross-region reference or a dedicated `us-east-1` stack if the main stack is deployed in `eu-west-2`
+- [x] Look up the existing Route 53 hosted zone in CDK via `HostedZone.fromLookup({ domainName })`
+- [x] Define an ACM `DnsValidatedCertificate` (or `Certificate` with `CertificateValidation.fromDns(hostedZone)`) for `<subdomain>.<domainName>`. **The certificate must be provisioned in `us-east-1`** — CloudFront only accepts certificates from that region. Use a cross-region reference or a dedicated `us-east-1` stack if the main stack is deployed in `eu-west-2`
 - [ ] Confirm DNS validation records are created automatically in the hosted zone and the certificate reaches `ISSUED` status
 
 #### CloudFront distribution
 
-- [ ] Add the custom domain to the CloudFront distribution via `domainNames: ['<subdomain>.<domainName>']` and attach the ACM certificate via `certificate`
-- [ ] Set `minimumProtocolVersion` to `TLS_V1_2_2021` (or latest) and confirm HTTPS-only behaviour is still enforced
+- [x] Add the custom domain to the CloudFront distribution via `domainNames: ['<subdomain>.<domainName>']` and attach the ACM certificate via `certificate`
+- [x] Set `minimumProtocolVersion` to `TLS_V1_2_2021` (or latest) and confirm HTTPS-only behaviour is still enforced
 - [ ] Redeploy the stack and verify the distribution shows the alternate domain name as attached
 
 #### Route 53 alias record
 
-- [ ] Define an `ARecord` (and optionally `AAAARecord` for IPv6) in the hosted zone with `recordName: subdomain` and `target: RecordTarget.fromAlias(new CloudFrontTarget(distribution))`
+- [x] Define an `ARecord` (and optionally `AAAARecord` for IPv6) in the hosted zone with `recordName: subdomain` and `target: RecordTarget.fromAlias(new CloudFrontTarget(distribution))`
 - [ ] Confirm `dig <subdomain>.<domainName>` resolves to the CloudFront distribution and `https://<subdomain>.<domainName>/` loads the app
 
 #### Cognito callback URLs
 
-- [ ] Update the Cognito App Client `callbackUrls` and `logoutUrls` in CDK to include the new custom domain: `https://<subdomain>.<domainName>/callback` and `https://<subdomain>.<domainName>`
-- [ ] Keep the existing `localhost:5173` entries for local dev, and keep the raw CloudFront URL entries until the custom domain is verified working (remove them in a follow-up deploy once confirmed)
+- [x] Update the Cognito App Client `callbackUrls` and `logoutUrls` in CDK to include the new custom domain: `https://<subdomain>.<domainName>/callback` and `https://<subdomain>.<domainName>`
+- [x] Keep the existing `localhost:5173` entries for local dev, and keep the raw CloudFront URL entries until the custom domain is verified working (remove them in a follow-up deploy once confirmed)
 - [ ] Redeploy the CDK stack so Cognito picks up the new allowed URLs
 
 #### Frontend build
 
-- [ ] Update `frontend/deploy.mjs` (prod path) to set `VITE_REDIRECT_URL=https://<subdomain>.<domainName>/callback` when deploying prod. Source the domain from a new CDK output (see next task) rather than hardcoding it
-- [ ] Add a new CDK output `AppUrl` (prod only) containing the full `https://<subdomain>.<domainName>` URL so `deploy.mjs` can read it from the stack outputs like the other `VITE_*` values
+- [x] Update `frontend/deploy.mjs` (prod path) to set `VITE_REDIRECT_URL=https://<subdomain>.<domainName>/callback` when deploying prod. Source the domain from a new CDK output (see next task) rather than hardcoding it
+- [x] Add a new CDK output `AppUrl` (prod only) containing the full `https://<subdomain>.<domainName>` URL so `deploy.mjs` can read it from the stack outputs like the other `VITE_*` values
 - [ ] Rebuild and redeploy the frontend; confirm the bundle's Amplify config points at the custom domain redirect URL
 
 #### Optional: custom domain for the API Gateway
@@ -499,7 +499,7 @@ Full smoke test checklist passes against the deployed production environment.
 - [ ] Dashboard loads live data after sign-in
 - [ ] Sign-out returns to `https://<subdomain>.<domainName>/`
 - [ ] Direct access to the old `*.cloudfront.net` URL still works (or is intentionally removed in a follow-up)
-- [ ] `dev` environment still deploys successfully with no custom-domain context set
+- [x] `dev` environment still deploys successfully with no custom-domain context set (verified via `cdk synth CommuteDashboard-dev`)
 
 ### Verification
 
