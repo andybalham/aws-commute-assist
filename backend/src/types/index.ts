@@ -1,22 +1,14 @@
-export interface CommuteProfile {
+import type { ProfileInput } from '../validation';
+
+export type { ProfileInput } from '../validation';
+
+export type CommuteProfile = ProfileInput & {
   userId: string;
   profileId: string;
-  name: string;
-  outbound: {
-    originCRS: string;
-    destinationCRS: string;
-    departureTime: string;
-  };
-  return: {
-    originCRS: string;
-    destinationCRS: string;
-    departureTime: string;
-  };
-  tflLines: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-}
+};
 
 export interface SourceResult<T = unknown> {
   status: 'ok' | 'error';

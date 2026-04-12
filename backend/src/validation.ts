@@ -1,3 +1,4 @@
+import { z, ZodError } from 'zod';
 import { isValidCrs, isValidTflLine } from './data/stations';
 
 export interface ValidationError {
@@ -7,70 +8,58 @@ export interface ValidationError {
 
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const crsField = (fieldName: 'originCRS' | 'destinationCRS') =>
+  z
+    .string({ error: () => `${fieldName} is required` })
+    .min(1, `${fieldName} is required`)
+    .refine(isValidCrs, { error: (ctx) => `Unknown station CRS: ${ctx.input}` });
 
-function validateLeg(
-  leg: unknown,
-  prefix: string
-): ValidationError[] {
-  const errors: ValidationError[] = [];
-  if (!isObject(leg)) {
-    errors.push({ field: prefix, message: `${prefix} must be an object` });
-    return errors;
-  }
+const LegSchema = z.object({
+  originCRS: crsField('originCRS'),
+  destinationCRS: crsField('destinationCRS'),
+  departureTime: z
+    .string({ error: () => 'departureTime is required' })
+    .min(1, 'departureTime is required')
+    .regex(TIME_REGEX, 'departureTime must be in HH:MM format (00:00–23:59)'),
+});
 
-  if (typeof leg.originCRS !== 'string' || !leg.originCRS) {
-    errors.push({ field: `${prefix}.originCRS`, message: 'originCRS is required' });
-  } else if (!isValidCrs(leg.originCRS)) {
-    errors.push({ field: `${prefix}.originCRS`, message: `Unknown station CRS: ${leg.originCRS}` });
-  }
+export const ProfileSchema = z.object({
+  name: z
+    .string({ error: () => 'name is required and must be a non-empty string' })
+    .refine((v) => v.trim().length > 0, 'name is required and must be a non-empty string'),
+  outbound: LegSchema,
+  return: LegSchema,
+  tflLines: z
+    .array(z.unknown(), { error: () => 'tflLines must be an array' })
+    .default([])
+    .superRefine((lines, ctx) => {
+      for (const line of lines) {
+        if (typeof line !== 'string' || !isValidTflLine(line)) {
+          ctx.addIssue({ code: 'custom', message: `Unknown TfL line ID: ${String(line)}` });
+        }
+      }
+    })
+    .transform((lines) => lines as string[]),
+});
 
-  if (typeof leg.destinationCRS !== 'string' || !leg.destinationCRS) {
-    errors.push({ field: `${prefix}.destinationCRS`, message: 'destinationCRS is required' });
-  } else if (!isValidCrs(leg.destinationCRS)) {
-    errors.push({ field: `${prefix}.destinationCRS`, message: `Unknown station CRS: ${leg.destinationCRS}` });
-  }
+export type ProfileInput = z.infer<typeof ProfileSchema>;
 
-  if (typeof leg.departureTime !== 'string' || !leg.departureTime) {
-    errors.push({ field: `${prefix}.departureTime`, message: 'departureTime is required' });
-  } else if (!TIME_REGEX.test(leg.departureTime)) {
-    errors.push({
-      field: `${prefix}.departureTime`,
-      message: 'departureTime must be in HH:MM format (00:00–23:59)',
-    });
-  }
-
-  return errors;
+function zodToFieldErrors(error: ZodError): ValidationError[] {
+  return error.issues.map((issue) => ({
+    field: issue.path.join('.') || 'body',
+    message: issue.message,
+  }));
 }
 
 export function validateProfile(body: unknown): ValidationError[] {
-  const errors: ValidationError[] = [];
-
-  if (!isObject(body)) {
-    errors.push({ field: 'body', message: 'Request body must be a JSON object' });
-    return errors;
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return [{ field: 'body', message: 'Request body must be a JSON object' }];
   }
+  const result = ProfileSchema.safeParse(body);
+  if (result.success) return [];
+  return zodToFieldErrors(result.error);
+}
 
-  if (typeof body.name !== 'string' || !body.name.trim()) {
-    errors.push({ field: 'name', message: 'name is required and must be a non-empty string' });
-  }
-
-  errors.push(...validateLeg(body.outbound, 'outbound'));
-  errors.push(...validateLeg(body.return, 'return'));
-
-  if (body.tflLines !== undefined) {
-    if (!Array.isArray(body.tflLines)) {
-      errors.push({ field: 'tflLines', message: 'tflLines must be an array' });
-    } else {
-      for (const lineId of body.tflLines) {
-        if (typeof lineId !== 'string' || !isValidTflLine(lineId)) {
-          errors.push({ field: 'tflLines', message: `Unknown TfL line ID: ${lineId}` });
-        }
-      }
-    }
-  }
-
-  return errors;
+export function parseProfile(body: unknown): ProfileInput {
+  return ProfileSchema.parse(body);
 }
