@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { getStationByCrs } from '../data/stations';
 import { WeatherSummary } from '../types';
+import { TtlCache } from './cache';
+
+const weatherCache = new TtlCache<WeatherSummary>(5 * 60 * 1000);
 
 // WMO Weather Interpretation Codes → human-readable conditions
 // https://open-meteo.com/en/docs — WMO Code Table
@@ -61,6 +64,10 @@ export async function getWeatherForecast(
   const targetDate = isoDateTime.slice(0, 10); // YYYY-MM-DD
   const targetHour = parseInt(isoDateTime.slice(11, 13), 10);
 
+  const cacheKey = `${station.lat},${station.lon},${targetDate}T${targetHour}`;
+  const cached = weatherCache.get(cacheKey);
+  if (cached) return cached;
+
   const response = await axios.get('https://api.open-meteo.com/v1/forecast', {
     params: {
       latitude: station.lat,
@@ -76,7 +83,7 @@ export async function getWeatherForecast(
   const hourly = response.data.hourly;
   const hourIndex = Math.min(targetHour, hourly.time.length - 1);
 
-  return {
+  const summary: WeatherSummary = {
     location: station.name,
     time: isoDateTime.slice(11, 16), // HH:MM
     condition: wmoToCondition(hourly.weather_code[hourIndex]),
@@ -84,4 +91,7 @@ export async function getWeatherForecast(
     precipitationProbability: hourly.precipitation_probability[hourIndex] ?? 0,
     windSpeedKmh: Math.round(hourly.wind_speed_10m[hourIndex]),
   };
+
+  weatherCache.set(cacheKey, summary);
+  return summary;
 }

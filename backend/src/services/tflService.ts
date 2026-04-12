@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { config } from '../config';
 import { TflLineSummary } from '../types';
+import { TtlCache } from './cache';
+
+const tflCache = new TtlCache<TflLineSummary[]>(60 * 1000);
 
 // TfL line ID → display name mapping
 const LINE_NAMES: Record<string, string> = {
@@ -36,7 +39,12 @@ export async function getLineStatuses(
 ): Promise<TflLineSummary[]> {
   if (lineIds.length === 0) return [];
 
-  const ids = lineIds.join(',');
+  const sortedIds = [...lineIds].sort();
+  const cacheKey = sortedIds.join(',');
+  const cached = tflCache.get(cacheKey);
+  if (cached) return cached;
+
+  const ids = sortedIds.join(',');
   const response = await axios.get(
     `https://api.tfl.gov.uk/Line/${ids}/Status`,
     {
@@ -48,7 +56,7 @@ export async function getLineStatuses(
     }
   );
 
-  return response.data.map((line: any) => {
+  const summaries: TflLineSummary[] = response.data.map((line: any) => {
     const status = line.lineStatuses?.[0];
     return {
       lineId: line.id,
@@ -57,4 +65,7 @@ export async function getLineStatuses(
       reason: status?.reason ?? null,
     };
   });
+
+  tflCache.set(cacheKey, summaries);
+  return summaries;
 }
