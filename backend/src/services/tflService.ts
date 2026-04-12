@@ -41,8 +41,8 @@ export async function getLineStatuses(
     `https://api.tfl.gov.uk/Line/${ids}/Status`,
     {
       params: {
-        app_id: config.tflAppId || undefined,
-        app_key: config.tflAppKey || undefined,
+        app_id: config.tflAppId && config.tflAppId !== 'PLACEHOLDER' ? config.tflAppId : undefined,
+        app_key: config.tflAppKey && config.tflAppKey !== 'PLACEHOLDER' ? config.tflAppKey : undefined,
       },
       timeout: 5000,
     }
