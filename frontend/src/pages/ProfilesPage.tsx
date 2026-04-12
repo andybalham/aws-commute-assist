@@ -80,11 +80,22 @@ export function ProfilesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Profiles</h1>
+        <h1
+          className="text-2xl font-bold"
+          style={{ color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}
+        >
+          Profiles
+        </h1>
         {formMode.type === 'closed' && (
           <button
             onClick={() => setFormMode({ type: 'create' })}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-white cursor-pointer transition-colors"
+            style={{
+              backgroundColor: 'var(--color-accent)',
+              fontFamily: 'var(--font-display)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-accent-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-accent)')}
           >
             New Profile
           </button>
@@ -93,12 +104,29 @@ export function ProfilesPage() {
 
       {/* Form */}
       {formMode.type !== 'closed' && (
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-5">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div
+          className="mb-6 rounded-xl border p-5"
+          style={{
+            backgroundColor: 'var(--color-bg-card)',
+            borderColor: 'var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <h2
+            className="text-lg font-semibold mb-4"
+            style={{ color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}
+          >
             {formMode.type === 'create' ? 'Create Profile' : 'Edit Profile'}
           </h2>
           {mutationError && (
-            <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+            <div
+              className="mb-4 rounded-lg border p-3 text-sm"
+              style={{
+                backgroundColor: 'var(--color-danger-soft)',
+                borderColor: 'var(--color-danger)',
+                color: 'var(--color-danger)',
+              }}
+            >
               {mutationError instanceof Error ? mutationError.message : 'Failed to save profile'}
             </div>
           )}
@@ -113,18 +141,31 @@ export function ProfilesPage() {
 
       {/* Loading */}
       {profilesQuery.isLoading && (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-          <p className="text-gray-500">Loading profiles...</p>
+        <div
+          className="rounded-xl border p-8 text-center"
+          style={{
+            backgroundColor: 'var(--color-bg-card)',
+            borderColor: 'var(--color-border-subtle)',
+          }}
+        >
+          <p style={{ color: 'var(--color-text-muted)' }}>Loading profiles...</p>
         </div>
       )}
 
       {/* Error */}
       {profilesQuery.isError && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+        <div
+          className="rounded-lg border p-4 text-sm"
+          style={{
+            backgroundColor: 'var(--color-danger-soft)',
+            borderColor: 'var(--color-danger)',
+            color: 'var(--color-danger)',
+          }}
+        >
           Failed to load profiles.{' '}
           <button
             onClick={() => profilesQuery.refetch()}
-            className="underline hover:text-red-900"
+            className="underline opacity-80 hover:opacity-100 cursor-pointer"
           >
             Retry
           </button>
@@ -133,9 +174,16 @@ export function ProfilesPage() {
 
       {/* Empty state */}
       {profilesQuery.isSuccess && profiles.length === 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-          <p className="text-gray-500">No commute profiles yet.</p>
-          <p className="text-sm text-gray-400 mt-1">Create a profile to get started.</p>
+        <div
+          className="rounded-xl border p-8 text-center"
+          style={{
+            backgroundColor: 'var(--color-bg-card)',
+            borderColor: 'var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <p style={{ color: 'var(--color-text-muted)' }}>No commute profiles yet.</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Create a profile to get started.</p>
         </div>
       )}
 
@@ -153,11 +201,11 @@ export function ProfilesPage() {
                 isDeleting={deleteMutation.isPending && deleteMutation.variables === p.profileId}
               />
               {deleteConfirm === p.profileId && !deleteMutation.isPending && (
-                <div className="mt-1 ml-4 text-sm text-red-600">
+                <div className="mt-1 ml-4 text-sm" style={{ color: 'var(--color-danger)' }}>
                   Click Delete again to confirm, or{' '}
                   <button
                     onClick={() => setDeleteConfirm(null)}
-                    className="underline hover:text-red-800"
+                    className="underline opacity-80 hover:opacity-100 cursor-pointer"
                   >
                     cancel
                   </button>

@@ -19,35 +19,46 @@ export function ProfileCard({
 }: ProfileCardProps) {
   return (
     <div
-      className={`rounded-lg border p-4 ${
-        profile.isActive ? 'border-blue-400 bg-blue-50/50' : 'border-gray-200 bg-white'
-      }`}
+      className="rounded-xl border p-4 transition-shadow"
+      style={{
+        borderColor: profile.isActive ? 'var(--color-accent)' : 'var(--color-border-subtle)',
+        backgroundColor: profile.isActive ? 'var(--color-accent-soft)' : 'var(--color-bg-card)',
+        boxShadow: profile.isActive ? 'var(--shadow-elevated)' : 'var(--shadow-card)',
+      }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-gray-900 truncate">{profile.name}</h3>
+            <h3
+              className="text-base font-semibold truncate"
+              style={{ color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}
+            >
+              {profile.name}
+            </h3>
             {profile.isActive && (
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+              <span
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                style={{ backgroundColor: 'var(--color-accent-muted)', color: 'var(--color-accent)' }}
+              >
                 Active
               </span>
             )}
           </div>
 
-          <div className="mt-2 space-y-1 text-sm text-gray-600">
+          <div className="mt-2 space-y-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             <p>
-              <span className="font-medium">Outbound:</span>{' '}
+              <span className="font-medium" style={{ color: 'var(--color-text)' }}>Outbound:</span>{' '}
               {profile.outbound.originCRS} → {profile.outbound.destinationCRS}{' '}
               at {profile.outbound.departureTime}
             </p>
             <p>
-              <span className="font-medium">Return:</span>{' '}
+              <span className="font-medium" style={{ color: 'var(--color-text)' }}>Return:</span>{' '}
               {profile.return.originCRS} → {profile.return.destinationCRS}{' '}
               at {profile.return.departureTime}
             </p>
             {profile.tflLines && profile.tflLines.length > 0 && (
               <p>
-                <span className="font-medium">TfL:</span>{' '}
+                <span className="font-medium" style={{ color: 'var(--color-text)' }}>TfL:</span>{' '}
                 {profile.tflLines.join(', ')}
               </p>
             )}
@@ -60,21 +71,34 @@ export function ProfileCard({
           <button
             onClick={onActivate}
             disabled={isActivating}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 cursor-pointer transition-colors"
+            style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
           >
             {isActivating ? 'Activating...' : 'Set Active'}
           </button>
         )}
         <button
           onClick={onEdit}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          className="rounded-lg border px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors"
+          style={{
+            backgroundColor: 'var(--color-bg-card)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text)',
+            fontFamily: 'var(--font-display)',
+          }}
         >
           Edit
         </button>
         <button
           onClick={onDelete}
           disabled={isDeleting}
-          className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+          className="rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50 cursor-pointer transition-colors"
+          style={{
+            backgroundColor: 'var(--color-bg-card)',
+            borderColor: 'var(--color-danger)',
+            color: 'var(--color-danger)',
+            fontFamily: 'var(--font-display)',
+          }}
         >
           {isDeleting ? 'Deleting...' : 'Delete'}
         </button>

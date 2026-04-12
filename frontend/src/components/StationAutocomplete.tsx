@@ -77,31 +77,51 @@ export function StationAutocomplete({
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label
+        className="block text-sm font-medium mb-1"
+        style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}
+      >
+        {label}
+      </label>
       <input
         type="text"
         value={query}
         onChange={(e) => handleInput(e.target.value)}
         onFocus={() => { if (results.length > 0) setIsOpen(true); }}
         placeholder="Search station name or CRS code..."
-        className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          error ? 'border-red-400' : 'border-gray-300'
-        }`}
+        className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+        style={{
+          backgroundColor: 'var(--color-bg-card)',
+          borderColor: error ? 'var(--color-danger)' : 'var(--color-border)',
+          color: 'var(--color-text)',
+          fontFamily: 'var(--font-body)',
+          '--tw-ring-color': 'var(--color-accent)',
+        } as React.CSSProperties}
       />
       {isLoading && (
-        <div className="absolute right-3 top-9 text-xs text-gray-400">...</div>
+        <div className="absolute right-3 top-9 text-xs" style={{ color: 'var(--color-text-muted)' }}>...</div>
       )}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs" style={{ color: 'var(--color-danger)' }}>{error}</p>}
       {isOpen && results.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full max-h-48 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+        <ul
+          className="absolute z-10 mt-1 w-full max-h-48 overflow-auto rounded-lg border"
+          style={{
+            backgroundColor: 'var(--color-bg-card)',
+            borderColor: 'var(--color-border)',
+            boxShadow: 'var(--shadow-dropdown)',
+          }}
+        >
           {results.map((s) => (
             <li
               key={s.crs}
               onClick={() => handleSelect(s)}
-              className="cursor-pointer px-3 py-2 text-sm hover:bg-blue-50"
+              className="cursor-pointer px-3 py-2 text-sm transition-colors"
+              style={{ color: 'var(--color-text)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-accent-soft)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <span className="font-medium">{s.name}</span>{' '}
-              <span className="text-gray-400">({s.crs})</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>({s.crs})</span>
             </li>
           ))}
         </ul>

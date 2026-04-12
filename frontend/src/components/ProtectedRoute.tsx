@@ -19,8 +19,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading || !isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">
+      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
+        <div style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-body)' }}>
           {isLoading ? 'Loading...' : 'Redirecting to login...'}
         </div>
       </div>

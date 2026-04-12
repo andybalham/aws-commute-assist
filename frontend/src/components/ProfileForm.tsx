@@ -89,6 +89,13 @@ interface ProfileFormProps {
   isSubmitting: boolean;
 }
 
+const inputStyle = (hasError: boolean) => ({
+  backgroundColor: 'var(--color-bg-card)',
+  borderColor: hasError ? 'var(--color-danger)' : 'var(--color-border)',
+  color: 'var(--color-text)',
+  fontFamily: 'var(--font-body)',
+});
+
 export function ProfileForm({ profile, onSubmit, onCancel, isSubmitting }: ProfileFormProps) {
   const [form, setForm] = useState<FormState>(profile ? profileToForm(profile) : emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -139,22 +146,28 @@ export function ProfileForm({ profile, onSubmit, onCancel, isSubmitting }: Profi
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Profile name */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Profile Name</label>
+        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
+          Profile Name
+        </label>
         <input
           type="text"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           placeholder="e.g. Weekday Commute"
-          className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.name ? 'border-red-400' : 'border-gray-300'
-          }`}
+          className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+          style={{ ...inputStyle(!!errors.name), '--tw-ring-color': 'var(--color-accent)' } as React.CSSProperties}
         />
-        {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
+        {errors.name && <p className="mt-1 text-xs" style={{ color: 'var(--color-danger)' }}>{errors.name}</p>}
       </div>
 
       {/* Outbound leg */}
       <fieldset className="space-y-3">
-        <legend className="text-sm font-semibold text-gray-900">Outbound Journey</legend>
+        <legend
+          className="text-sm font-semibold uppercase tracking-wider"
+          style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.1em' }}
+        >
+          Outbound Journey
+        </legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <StationAutocomplete
             label="Origin"
@@ -172,24 +185,30 @@ export function ProfileForm({ profile, onSubmit, onCancel, isSubmitting }: Profi
           />
         </div>
         <div className="max-w-xs">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Departure Time</label>
+          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
+            Departure Time
+          </label>
           <input
             type="time"
             value={form.outboundTime}
             onChange={(e) => setForm({ ...form, outboundTime: e.target.value })}
-            className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors['outbound.departureTime'] ? 'border-red-400' : 'border-gray-300'
-            }`}
+            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+            style={{ ...inputStyle(!!errors['outbound.departureTime']), '--tw-ring-color': 'var(--color-accent)' } as React.CSSProperties}
           />
           {errors['outbound.departureTime'] && (
-            <p className="mt-1 text-xs text-red-600">{errors['outbound.departureTime']}</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--color-danger)' }}>{errors['outbound.departureTime']}</p>
           )}
         </div>
       </fieldset>
 
       {/* Return leg */}
       <fieldset className="space-y-3">
-        <legend className="text-sm font-semibold text-gray-900">Return Journey</legend>
+        <legend
+          className="text-sm font-semibold uppercase tracking-wider"
+          style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.1em' }}
+        >
+          Return Journey
+        </legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <StationAutocomplete
             label="Origin"
@@ -207,17 +226,18 @@ export function ProfileForm({ profile, onSubmit, onCancel, isSubmitting }: Profi
           />
         </div>
         <div className="max-w-xs">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Departure Time</label>
+          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
+            Departure Time
+          </label>
           <input
             type="time"
             value={form.returnTime}
             onChange={(e) => setForm({ ...form, returnTime: e.target.value })}
-            className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors['return.departureTime'] ? 'border-red-400' : 'border-gray-300'
-            }`}
+            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+            style={{ ...inputStyle(!!errors['return.departureTime']), '--tw-ring-color': 'var(--color-accent)' } as React.CSSProperties}
           />
           {errors['return.departureTime'] && (
-            <p className="mt-1 text-xs text-red-600">{errors['return.departureTime']}</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--color-danger)' }}>{errors['return.departureTime']}</p>
           )}
         </div>
       </fieldset>
@@ -235,14 +255,21 @@ export function ProfileForm({ profile, onSubmit, onCancel, isSubmitting }: Profi
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 cursor-pointer transition-colors"
+          style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
         >
           {isSubmitting ? 'Saving...' : profile ? 'Update Profile' : 'Create Profile'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          className="rounded-lg border px-4 py-2 text-sm font-medium cursor-pointer transition-colors"
+          style={{
+            backgroundColor: 'var(--color-bg-card)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text)',
+            fontFamily: 'var(--font-display)',
+          }}
         >
           Cancel
         </button>

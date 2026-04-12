@@ -1,14 +1,164 @@
 @import "tailwindcss";
 
+/* Class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------ */
+/* Theme tokens                                                       */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --font-display: "Outfit", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+
+  /* Surfaces */
+  --color-bg: #FAF9F7;
+  --color-bg-card: #FFFFFF;
+  --color-bg-card-alt: #F5F3F0;
+  --color-bg-inset: #F0EDEA;
+  --color-bg-overlay: rgba(255, 255, 255, 0.8);
+
+  /* Borders */
+  --color-border: #E5E1DC;
+  --color-border-subtle: #EDE9E4;
+
+  /* Text */
+  --color-text: #1A1A1A;
+  --color-text-secondary: #6B6560;
+  --color-text-muted: #9C9590;
+
+  /* Accent – teal */
+  --color-accent: #0D9488;
+  --color-accent-hover: #0F766E;
+  --color-accent-soft: #CCFBF1;
+  --color-accent-muted: #99F6E4;
+
+  /* Semantic */
+  --color-success: #16A34A;
+  --color-success-soft: #DCFCE7;
+  --color-warning: #D97706;
+  --color-warning-soft: #FEF3C7;
+  --color-danger: #DC2626;
+  --color-danger-soft: #FEE2E2;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.06);
+
+  /* Nav accent gradient */
+  --nav-accent: linear-gradient(90deg, #0D9488, #14B8A6, #F59E0B, #0D9488);
+}
+
+.dark {
+  --color-bg: #0F1419;
+  --color-bg-card: #1A2028;
+  --color-bg-card-alt: #212A34;
+  --color-bg-inset: #161D24;
+  --color-bg-overlay: rgba(15, 20, 25, 0.85);
+
+  --color-border: #2D3842;
+  --color-border-subtle: #242D36;
+
+  --color-text: #E8E6E3;
+  --color-text-secondary: #9CA3AF;
+  --color-text-muted: #6B7280;
+
+  --color-accent: #2DD4BF;
+  --color-accent-hover: #5EEAD4;
+  --color-accent-soft: rgba(45, 212, 191, 0.12);
+  --color-accent-muted: rgba(45, 212, 191, 0.20);
+
+  --color-success: #4ADE80;
+  --color-success-soft: rgba(74, 222, 128, 0.12);
+  --color-warning: #FBBF24;
+  --color-warning-soft: rgba(251, 191, 36, 0.12);
+  --color-danger: #F87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.12);
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.20), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.20);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.20);
+
+  --nav-accent: linear-gradient(90deg, #2DD4BF, #5EEAD4, #FBBF24, #2DD4BF);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base styles                                                        */
+/* ------------------------------------------------------------------ */
+
 body {
   margin: 0;
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
 }
 
 /* Consistent keyboard focus ring across all interactive elements.
  * Tailwind v4 disables the default browser outline; we restore a visible
  * indicator only for keyboard focus (`:focus-visible`), not mouse clicks. */
 :focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Scrollbar styling (dark mode)                                      */
+/* ------------------------------------------------------------------ */
+
+.dark ::-webkit-scrollbar {
+  width: 8px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: var(--color-bg-inset);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Nav accent bar animation                                           */
+/* ------------------------------------------------------------------ */
+
+@keyframes nav-shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.nav-accent-bar {
+  height: 2px;
+  background: var(--nav-accent);
+  background-size: 200% 100%;
+  animation: nav-shimmer 8s linear infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Theme transition                                                   */
+/* ------------------------------------------------------------------ */
+
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease, box-shadow 0.3s ease !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Skeleton pulse (refined)                                           */
+/* ------------------------------------------------------------------ */
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
 }

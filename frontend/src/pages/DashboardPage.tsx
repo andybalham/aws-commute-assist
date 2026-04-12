@@ -34,12 +34,6 @@ const TFL_LINE_COLOURS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 // Darwin API window helpers
 // ---------------------------------------------------------------------------
-//
-// Darwin's live departure board returns services for ~120 minutes from now, and
-// `railService.ts` filters those to ±30 min of the target time. So a target is
-// "outside the window" when it is either in the past or more than 150 minutes
-// in the future — in both cases an empty result is expected, not an error, so
-// we suppress the "No services found" message.
 
 function parseHHMM(t: string): number {
   const [h, m] = t.split(':').map(Number);
@@ -83,7 +77,12 @@ function weatherIcon(condition: string): string {
 // ---------------------------------------------------------------------------
 
 function SkeletonLine({ className = '' }: { className?: string }) {
-  return <div className={`h-4 bg-gray-200 rounded animate-pulse ${className}`} />;
+  return (
+    <div
+      className={`h-4 rounded skeleton-pulse ${className}`}
+      style={{ backgroundColor: 'var(--color-bg-inset)' }}
+    />
+  );
 }
 
 function RailSkeleton() {
@@ -103,7 +102,7 @@ function WeatherSkeleton() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="space-y-2 p-3 rounded-lg bg-gray-50">
+        <div key={i} className="space-y-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-inset)' }}>
           <SkeletonLine className="w-2/3" />
           <SkeletonLine className="w-1/2" />
           <SkeletonLine className="w-3/4" />
@@ -118,7 +117,7 @@ function TflSkeleton() {
     <div className="space-y-2">
       {[1, 2].map((i) => (
         <div key={i} className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-gray-200 animate-pulse" />
+          <div className="w-3 h-3 rounded-full skeleton-pulse" style={{ backgroundColor: 'var(--color-bg-inset)' }} />
           <SkeletonLine className="flex-1" />
         </div>
       ))}
@@ -132,8 +131,20 @@ function TflSkeleton() {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5">
-      <h2 className="text-base font-semibold text-gray-900 mb-3">{title}</h2>
+    <div
+      className="rounded-xl border p-5"
+      style={{
+        backgroundColor: 'var(--color-bg-card)',
+        borderColor: 'var(--color-border-subtle)',
+        boxShadow: 'var(--shadow-card)',
+      }}
+    >
+      <h2
+        className="text-base font-semibold mb-3"
+        style={{ color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}
+      >
+        {title}
+      </h2>
       {children}
     </div>
   );
@@ -141,12 +152,19 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 function SectionError({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+    <div
+      className="rounded-lg border p-3 text-sm"
+      style={{
+        backgroundColor: 'var(--color-danger-soft)',
+        borderColor: 'var(--color-danger)',
+        color: 'var(--color-danger)',
+      }}
+    >
       {message}
       {onRetry && (
         <>
           {' '}
-          <button onClick={onRetry} className="underline hover:text-red-900">
+          <button onClick={onRetry} className="underline opacity-80 hover:opacity-100 cursor-pointer">
             Retry
           </button>
         </>
@@ -160,43 +178,59 @@ function SectionError({ message, onRetry }: { message: string; onRetry?: () => v
 // ---------------------------------------------------------------------------
 
 function StatusBadge({ status }: { status: TrainService['status'] }) {
-  const styles = {
-    'on-time': 'bg-green-100 text-green-700',
-    delayed: 'bg-amber-100 text-amber-700',
-    cancelled: 'bg-red-100 text-red-700',
+  const styles: Record<string, { bg: string; color: string }> = {
+    'on-time': { bg: 'var(--color-success-soft)', color: 'var(--color-success)' },
+    delayed: { bg: 'var(--color-warning-soft)', color: 'var(--color-warning)' },
+    cancelled: { bg: 'var(--color-danger-soft)', color: 'var(--color-danger)' },
   };
   const labels = {
     'on-time': 'On Time',
     delayed: 'Delayed',
     cancelled: 'Cancelled',
   };
+  const s = styles[status];
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
+    <span
+      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+      style={{ backgroundColor: s.bg, color: s.color }}
+    >
       {labels[status]}
     </span>
   );
 }
 
 function ServiceRow({ service }: { service: TrainService }) {
+  const isCancelled = service.status === 'cancelled';
   return (
-    <div className={`rounded-md border p-3 ${service.status === 'cancelled' ? 'border-red-200 bg-red-50/50' : 'border-gray-100 bg-gray-50/50'}`}>
+    <div
+      className="rounded-lg border p-3"
+      style={{
+        borderColor: isCancelled ? 'var(--color-danger)' : 'var(--color-border-subtle)',
+        backgroundColor: isCancelled ? 'var(--color-danger-soft)' : 'var(--color-bg-card-alt)',
+      }}
+    >
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-semibold">{service.scheduledTime}</span>
+          <span className="font-mono text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+            {service.scheduledTime}
+          </span>
           {service.status !== 'on-time' && (
-            <span className={`font-mono text-sm ${service.status === 'cancelled' ? 'text-red-600 line-through' : 'text-amber-600'}`}>
+            <span
+              className={`font-mono text-sm ${isCancelled ? 'line-through' : ''}`}
+              style={{ color: isCancelled ? 'var(--color-danger)' : 'var(--color-warning)' }}
+            >
               {service.expectedTime}
             </span>
           )}
           <StatusBadge status={service.status} />
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          {service.platform && <span>Plat {service.platform}</span>}
+        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+          {service.platform && <span className="font-medium" style={{ color: 'var(--color-accent)' }}>Plat {service.platform}</span>}
           <span>{service.operator}</span>
         </div>
       </div>
       {service.callingPoints.length > 0 && (
-        <p className="mt-1.5 text-xs text-gray-500 truncate">
+        <p className="mt-1.5 text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>
           Calling at: {service.callingPoints.join(', ')}
         </p>
       )}
@@ -209,7 +243,15 @@ function ServiceMessages({ messages }: { messages: string[] }) {
   return (
     <div className="mb-3 space-y-1">
       {messages.map((msg, i) => (
-        <div key={i} className="rounded-md bg-amber-50 border border-amber-200 p-2 text-sm text-amber-800">
+        <div
+          key={i}
+          className="rounded-lg border p-2 text-sm"
+          style={{
+            backgroundColor: 'var(--color-warning-soft)',
+            borderColor: 'var(--color-warning)',
+            color: 'var(--color-warning)',
+          }}
+        >
           {msg}
         </div>
       ))}
@@ -234,8 +276,6 @@ function DepartureBoard({
   outsideWindow: boolean;
   outsideWindowNotice?: string;
 }) {
-  // Fallback notice when outside the Darwin window, no services, and the backend
-  // didn't already supply an explanatory message.
   const showOutsideNotice =
     !error &&
     services.length === 0 &&
@@ -245,21 +285,30 @@ function DepartureBoard({
 
   return (
     <div>
-      <h3 className="text-sm font-medium text-gray-700 mb-2">{label}</h3>
+      <h3
+        className="text-sm font-semibold mb-2 uppercase tracking-wider"
+        style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.1em' }}
+      >
+        {label}
+      </h3>
       <ServiceMessages messages={messages} />
       {showOutsideNotice && (
-        <div className="mb-3 rounded-md bg-amber-50 border border-amber-200 p-2 text-sm text-amber-800">
+        <div
+          className="mb-3 rounded-lg border p-2 text-sm"
+          style={{
+            backgroundColor: 'var(--color-warning-soft)',
+            borderColor: 'var(--color-warning)',
+            color: 'var(--color-warning)',
+          }}
+        >
           {outsideWindowNotice}
         </div>
       )}
       {error ? (
         <SectionError message={error} onRetry={onRetry} />
       ) : services.length === 0 ? (
-        // Suppress the placeholder when we're outside the Darwin window, OR when the
-        // backend already returned an explanatory message (e.g. "Services will appear
-        // closer to the departure time."). The message alone is enough context.
         outsideWindow || messages.length > 0 ? null : (
-          <p className="text-sm text-gray-400">No services found</p>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No services found</p>
         )
       ) : (
         <div className="space-y-2">
@@ -318,22 +367,28 @@ function RailSection({
 function WeatherCard({ weather, label }: { weather: WeatherSummary | null; label: string }) {
   if (!weather) {
     return (
-      <div className="rounded-lg bg-gray-50 p-3 text-center">
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="text-sm text-gray-400 mt-1">No data</p>
+      <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--color-bg-inset)' }}>
+        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{label}</p>
+        <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>No data</p>
       </div>
     );
   }
   return (
-    <div className="rounded-lg bg-gradient-to-br from-blue-50 to-sky-50 p-3">
-      <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
-      <p className="text-xs text-gray-400 mb-2">{weather.location}</p>
+    <div
+      className="rounded-lg p-3 border"
+      style={{
+        backgroundColor: 'var(--color-bg-card-alt)',
+        borderColor: 'var(--color-border-subtle)',
+      }}
+    >
+      <p className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.08em' }}>{label}</p>
+      <p className="text-xs mb-2" style={{ color: 'var(--color-text-muted)' }}>{weather.location}</p>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-2xl">{weatherIcon(weather.condition)}</span>
-        <span className="text-xl font-semibold text-gray-900">{weather.temperatureC}°C</span>
+        <span className="text-xl font-bold" style={{ color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}>{weather.temperatureC}°C</span>
       </div>
-      <p className="text-sm text-gray-600">{weather.condition}</p>
-      <div className="mt-2 flex gap-3 text-xs text-gray-500">
+      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{weather.condition}</p>
+      <div className="mt-2 flex gap-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
         <span>💧 {weather.precipitationProbability}%</span>
         <span>💨 {weather.windSpeedKmh} km/h</span>
       </div>
@@ -365,17 +420,20 @@ function TflLineRow({ line }: { line: TflLineSummary }) {
     <div className="flex items-start gap-3 py-2">
       <span
         className="mt-0.5 inline-block h-3 w-3 rounded-full shrink-0"
-        style={{ backgroundColor: colour }}
+        style={{ backgroundColor: colour, boxShadow: `0 0 0 2px ${colour}33` }}
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-gray-900">{line.lineName}</span>
-          <span className={`text-xs font-medium ${isGoodService ? 'text-green-600' : 'text-amber-600'}`}>
+          <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{line.lineName}</span>
+          <span
+            className="text-xs font-medium"
+            style={{ color: isGoodService ? 'var(--color-success)' : 'var(--color-warning)' }}
+          >
             {line.status}
           </span>
         </div>
         {line.reason && (
-          <p className="text-xs text-gray-500 mt-0.5">{line.reason}</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{line.reason}</p>
         )}
       </div>
     </div>
@@ -387,10 +445,10 @@ function TflSection({ tfl, onRetry }: { tfl: DashboardResponse['tfl']; onRetry: 
     return <SectionError message={tfl.error} onRetry={onRetry} />;
   }
   if (tfl.lines.length === 0) {
-    return <p className="text-sm text-gray-400">No TfL lines configured</p>;
+    return <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No TfL lines configured</p>;
   }
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="divide-y" style={{ borderColor: 'var(--color-border-subtle)' }}>
       {tfl.lines.map((line) => (
         <TflLineRow key={line.lineId} line={line} />
       ))}
@@ -419,7 +477,13 @@ function ProfileSelector({
       value={activeProfileId}
       onChange={(e) => onSwitch(e.target.value)}
       disabled={isSwitching}
-      className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm disabled:opacity-50"
+      className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-50"
+      style={{
+        backgroundColor: 'var(--color-bg-card)',
+        borderColor: 'var(--color-border)',
+        color: 'var(--color-text)',
+        fontFamily: 'var(--font-body)',
+      }}
     >
       {profiles.map((p) => (
         <option key={p.profileId} value={p.profileId}>
@@ -477,21 +541,26 @@ export function DashboardPage() {
     return (
       <div>
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}
+          >
+            Dashboard
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
             No active profile — go to Profiles to set one up.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <SectionCard title="Rail Departures">
-            <p className="text-sm text-gray-400">No data yet</p>
+            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No data yet</p>
           </SectionCard>
           <SectionCard title="Weather">
-            <p className="text-sm text-gray-400">No data yet</p>
+            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No data yet</p>
           </SectionCard>
           <SectionCard title="TfL Status">
-            <p className="text-sm text-gray-400">No data yet</p>
+            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No data yet</p>
           </SectionCard>
         </div>
       </div>
@@ -503,9 +572,16 @@ export function DashboardPage() {
       {/* Dashboard header */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text)', fontFamily: 'var(--font-display)' }}
+          >
+            Dashboard
+          </h1>
           {dashboard && (
-            <p className="text-sm text-gray-500 mt-0.5">{dashboard.profile.name}</p>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+              {dashboard.profile.name}
+            </p>
           )}
         </div>
 
@@ -518,7 +594,7 @@ export function DashboardPage() {
           />
 
           {dashboard?.lastRefreshed && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               Updated {new Date(dashboard.lastRefreshed).toLocaleTimeString()}
             </span>
           )}
@@ -526,7 +602,13 @@ export function DashboardPage() {
           <button
             onClick={handleRefresh}
             disabled={dashboardQuery.isFetching}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50 cursor-pointer transition-colors"
+            style={{
+              backgroundColor: 'var(--color-bg-card)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text)',
+              fontFamily: 'var(--font-display)',
+            }}
           >
             {dashboardQuery.isFetching ? 'Refreshing...' : 'Refresh'}
           </button>
@@ -550,9 +632,16 @@ export function DashboardPage() {
 
       {/* Error state */}
       {hasError && !dashboard && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+        <div
+          className="rounded-lg border p-4 text-sm"
+          style={{
+            backgroundColor: 'var(--color-danger-soft)',
+            borderColor: 'var(--color-danger)',
+            color: 'var(--color-danger)',
+          }}
+        >
           Failed to load dashboard data.{' '}
-          <button onClick={handleRefresh} className="underline hover:text-red-900">
+          <button onClick={handleRefresh} className="underline opacity-80 hover:opacity-100 cursor-pointer">
             Retry
           </button>
         </div>
