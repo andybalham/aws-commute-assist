@@ -69,63 +69,62 @@ describe('dashboardController', () => {
     expect(result.statusCode).toBe(404);
   });
 
-  it('returns a full dashboard response with all sections', async () => {
+  it('returns a full dashboard response with all sources', async () => {
     const result = await getDashboard(makeCtx());
 
     expect(result.statusCode).toBe(200);
     const body = result.body as any;
     expect(body.profile.name).toBe('Test Commute');
-    expect(body.rail.outbound).toBeDefined();
-    expect(body.rail.return).toBeDefined();
-    expect(body.weather.outboundOrigin).toBeDefined();
-    expect(body.weather.destination).toBeDefined();
-    expect(body.weather.returnDestination).toBeDefined();
-    expect(body.tfl.lines).toHaveLength(1);
+    expect(body.sources['rail.outbound'].status).toBe('ok');
+    expect(body.sources['rail.return'].status).toBe('ok');
+    expect(body.sources['weather.outboundOrigin'].status).toBe('ok');
+    expect(body.sources['weather.destination'].status).toBe('ok');
+    expect(body.sources['weather.returnDestination'].status).toBe('ok');
+    expect(body.sources['tfl'].status).toBe('ok');
+    expect(body.sources['tfl'].data).toHaveLength(1);
     expect(body.lastRefreshed).toBeDefined();
   });
 
-  it('populates rail error when rail service fails', async () => {
+  it('marks rail.outbound as error when rail service fails', async () => {
     railService.getDepartures.mockRejectedValue(new Error('Darwin down'));
 
     const result = await getDashboard(makeCtx());
     const body = result.body as any;
 
     expect(result.statusCode).toBe(200);
-    expect(body.rail.outbound.error).toContain('Darwin down');
-    expect(body.rail.outbound.services).toEqual([]);
-    // Weather and TfL should still be populated
-    expect(body.weather.outboundOrigin).not.toBeNull();
-    expect(body.tfl.lines).toHaveLength(1);
+    expect(body.sources['rail.outbound'].status).toBe('error');
+    expect(body.sources['rail.outbound'].error).toContain('Darwin down');
+    expect(body.sources['weather.outboundOrigin'].status).toBe('ok');
+    expect(body.sources['tfl'].status).toBe('ok');
   });
 
-  it('populates weather error when weather service fails', async () => {
-    weatherService.getWeatherForecast.mockRejectedValue(new Error('API timeout'));
+  it('marks weather source as error when that call fails', async () => {
+    weatherService.getWeatherForecast.mockRejectedValueOnce(new Error('API timeout'));
 
     const result = await getDashboard(makeCtx());
     const body = result.body as any;
 
     expect(result.statusCode).toBe(200);
-    expect(body.weather.error).toContain('unavailable');
-    expect(body.weather.outboundOrigin).toBeNull();
-    // Rail and TfL should still work
-    expect(body.rail.outbound.services).toBeDefined();
-    expect(body.tfl.lines).toHaveLength(1);
+    expect(body.sources['weather.outboundOrigin'].status).toBe('error');
+    expect(body.sources['weather.outboundOrigin'].error).toContain('API timeout');
+    expect(body.sources['weather.destination'].status).toBe('ok');
+    expect(body.sources['rail.outbound'].status).toBe('ok');
+    expect(body.sources['tfl'].status).toBe('ok');
   });
 
-  it('populates TfL error when TfL service fails', async () => {
+  it('marks tfl as error when TfL service fails', async () => {
     tflService.getLineStatuses.mockRejectedValue(new Error('TfL down'));
 
     const result = await getDashboard(makeCtx());
     const body = result.body as any;
 
     expect(result.statusCode).toBe(200);
-    expect(body.tfl.error).toContain('TfL down');
-    expect(body.tfl.lines).toEqual([]);
-    // Rail and weather should still work
-    expect(body.weather.outboundOrigin).not.toBeNull();
+    expect(body.sources['tfl'].status).toBe('error');
+    expect(body.sources['tfl'].error).toContain('TfL down');
+    expect(body.sources['weather.outboundOrigin'].status).toBe('ok');
   });
 
-  it('skips TfL when no lines configured', async () => {
+  it('omits tfl source when no lines configured', async () => {
     repo.listProfiles.mockResolvedValue([
       { ...ACTIVE_PROFILE, tflLines: [] },
     ]);
@@ -133,7 +132,7 @@ describe('dashboardController', () => {
     const result = await getDashboard(makeCtx());
     const body = result.body as any;
 
-    expect(body.tfl.lines).toEqual([]);
+    expect(body.sources['tfl']).toBeUndefined();
     expect(tflService.getLineStatuses).not.toHaveBeenCalled();
   });
 

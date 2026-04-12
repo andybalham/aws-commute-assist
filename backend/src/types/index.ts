@@ -18,33 +18,18 @@ export interface CommuteProfile {
   updatedAt: string;
 }
 
+export interface SourceResult<T = unknown> {
+  status: 'ok' | 'error';
+  data?: T;
+  error?: string;
+}
+
 export interface DashboardResponse {
   profile: {
     name: string;
     profileId: string;
   };
-  rail: {
-    outbound: {
-      services: TrainService[];
-      messages: string[];
-      error?: string;
-    };
-    return: {
-      services: TrainService[];
-      messages: string[];
-      error?: string;
-    };
-  };
-  weather: {
-    outboundOrigin: WeatherSummary | null;
-    destination: WeatherSummary | null;
-    returnDestination: WeatherSummary | null;
-    error?: string;
-  };
-  tfl: {
-    lines: TflLineSummary[];
-    error?: string;
-  };
+  sources: Record<string, SourceResult>;
   lastRefreshed: string;
 }
 

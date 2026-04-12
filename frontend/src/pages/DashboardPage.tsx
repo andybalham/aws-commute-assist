@@ -7,29 +7,19 @@ import type {
   WeatherSummary,
   TflLineSummary,
   CommuteProfile,
+  SourceResult,
+  RailSource,
 } from '../api/types';
 
-// ---------------------------------------------------------------------------
-// TfL line colours (matches TflLineSelector.tsx)
-// ---------------------------------------------------------------------------
-
-const TFL_LINE_COLOURS: Record<string, string> = {
-  bakerloo: '#B36305',
-  central: '#E32017',
-  circle: '#FFD300',
-  district: '#00782A',
-  elizabeth: '#6950A1',
-  'hammersmith-city': '#F3A9BB',
-  jubilee: '#A0A5A9',
-  metropolitan: '#9B0056',
-  northern: '#000000',
-  piccadilly: '#003688',
-  victoria: '#0098D4',
-  'waterloo-city': '#95CDBA',
-  dlr: '#00A4A7',
-  'london-overground': '#EE7C0E',
-  tram: '#84B817',
-};
+function unwrap<T>(
+  sources: DashboardResponse['sources'],
+  key: string
+): { data?: T; error?: string } {
+  const s = sources[key] as SourceResult<T> | undefined;
+  if (!s) return {};
+  return s.status === 'ok' ? { data: s.data } : { error: s.error };
+}
+import { TFL_LINE_COLOURS } from '../data/tflLines';
 
 // ---------------------------------------------------------------------------
 // Darwin API window helpers
@@ -322,11 +312,13 @@ function DepartureBoard({
 }
 
 function RailSection({
-  rail,
+  outbound,
+  returnSrc,
   profile,
   onRetry,
 }: {
-  rail: DashboardResponse['rail'];
+  outbound: { data?: RailSource; error?: string };
+  returnSrc: { data?: RailSource; error?: string };
   profile: CommuteProfile | undefined;
   onRetry: () => void;
 }) {
@@ -335,14 +327,22 @@ function RailSection({
   const outboundOutside = profile ? isOutsideDarwinWindow(profile.outbound.departureTime, now) : false;
   const returnOutside = profile ? isOutsideDarwinWindow(profile.return.departureTime, now) : false;
 
+  const outboundServices = outbound.data?.services ?? [];
+  const outboundMessages = outbound.data?.messages ?? [];
+  const outboundError = outbound.error ? `Rail service error: ${outbound.error}` : undefined;
+
+  const returnServices = returnSrc.data?.services ?? [];
+  const returnMessages = returnSrc.data?.messages ?? [];
+  const returnError = returnSrc.error ? `Rail service error: ${returnSrc.error}` : undefined;
+
   return (
     <div className="space-y-5">
       {!hideOutbound && (
         <DepartureBoard
           label="Outbound"
-          services={rail.outbound.services}
-          messages={rail.outbound.messages}
-          error={rail.outbound.error}
+          services={outboundServices}
+          messages={outboundMessages}
+          error={outboundError}
           onRetry={onRetry}
           outsideWindow={outboundOutside}
           outsideWindowNotice="Services will appear closer to the departure time."
@@ -350,9 +350,9 @@ function RailSection({
       )}
       <DepartureBoard
         label="Return"
-        services={rail.return.services}
-        messages={rail.return.messages}
-        error={rail.return.error}
+        services={returnServices}
+        messages={returnMessages}
+        error={returnError}
         onRetry={onRetry}
         outsideWindow={returnOutside}
       />
@@ -396,15 +396,27 @@ function WeatherCard({ weather, label }: { weather: WeatherSummary | null; label
   );
 }
 
-function WeatherSection({ weather, onRetry }: { weather: DashboardResponse['weather']; onRetry: () => void }) {
-  if (weather.error) {
-    return <SectionError message={weather.error} onRetry={onRetry} />;
+function WeatherSection({
+  outboundOrigin,
+  destination,
+  returnDestination,
+  onRetry,
+}: {
+  outboundOrigin: { data?: WeatherSummary; error?: string };
+  destination: { data?: WeatherSummary; error?: string };
+  returnDestination: { data?: WeatherSummary; error?: string };
+  onRetry: () => void;
+}) {
+  const allErrored =
+    outboundOrigin.error && destination.error && returnDestination.error;
+  if (allErrored) {
+    return <SectionError message="Weather service unavailable" onRetry={onRetry} />;
   }
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <WeatherCard weather={weather.outboundOrigin} label="Outbound Origin" />
-      <WeatherCard weather={weather.destination} label="Destination" />
-      <WeatherCard weather={weather.returnDestination} label="Return Destination" />
+      <WeatherCard weather={outboundOrigin.data ?? null} label="Outbound Origin" />
+      <WeatherCard weather={destination.data ?? null} label="Destination" />
+      <WeatherCard weather={returnDestination.data ?? null} label="Return Destination" />
     </div>
   );
 }
@@ -440,16 +452,23 @@ function TflLineRow({ line }: { line: TflLineSummary }) {
   );
 }
 
-function TflSection({ tfl, onRetry }: { tfl: DashboardResponse['tfl']; onRetry: () => void }) {
+function TflSection({
+  tfl,
+  onRetry,
+}: {
+  tfl: { data?: TflLineSummary[]; error?: string };
+  onRetry: () => void;
+}) {
   if (tfl.error) {
-    return <SectionError message={tfl.error} onRetry={onRetry} />;
+    return <SectionError message={`TfL service error: ${tfl.error}`} onRetry={onRetry} />;
   }
-  if (tfl.lines.length === 0) {
+  const lines = tfl.data ?? [];
+  if (lines.length === 0) {
     return <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No TfL lines configured</p>;
   }
   return (
     <div className="divide-y" style={{ borderColor: 'var(--color-border-subtle)' }}>
-      {tfl.lines.map((line) => (
+      {lines.map((line) => (
         <TflLineRow key={line.lineId} line={line} />
       ))}
     </div>
@@ -648,33 +667,50 @@ export function DashboardPage() {
       )}
 
       {/* Dashboard data */}
-      {dashboard && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Rail — spans 2 columns on desktop */}
-          <div className="lg:col-span-2">
-            <SectionCard title="Rail Departures">
-              <RailSection
-                rail={dashboard.rail}
-                profile={profiles.find((p) => p.profileId === dashboard.profile.profileId)}
-                onRetry={handleRefresh}
-              />
-            </SectionCard>
-          </div>
+      {dashboard && (() => {
+        const srcs = dashboard.sources;
+        const outbound = unwrap<RailSource>(srcs, 'rail.outbound');
+        const returnSrc = unwrap<RailSource>(srcs, 'rail.return');
+        const weatherOrigin = unwrap<WeatherSummary>(srcs, 'weather.outboundOrigin');
+        const weatherDest = unwrap<WeatherSummary>(srcs, 'weather.destination');
+        const weatherReturn = unwrap<WeatherSummary>(srcs, 'weather.returnDestination');
+        const tfl = unwrap<TflLineSummary[]>(srcs, 'tfl');
+        const hasTfl = srcs['tfl'] !== undefined;
 
-          {/* Weather + TfL stacked in right column on desktop */}
-          <div className="space-y-4">
-            <SectionCard title="Weather">
-              <WeatherSection weather={dashboard.weather} onRetry={handleRefresh} />
-            </SectionCard>
-
-            {dashboard.tfl.lines.length > 0 && (
-              <SectionCard title="TfL Status">
-                <TflSection tfl={dashboard.tfl} onRetry={handleRefresh} />
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Rail — spans 2 columns on desktop */}
+            <div className="lg:col-span-2">
+              <SectionCard title="Rail Departures">
+                <RailSection
+                  outbound={outbound}
+                  returnSrc={returnSrc}
+                  profile={profiles.find((p) => p.profileId === dashboard.profile.profileId)}
+                  onRetry={handleRefresh}
+                />
               </SectionCard>
-            )}
+            </div>
+
+            {/* Weather + TfL stacked in right column on desktop */}
+            <div className="space-y-4">
+              <SectionCard title="Weather">
+                <WeatherSection
+                  outboundOrigin={weatherOrigin}
+                  destination={weatherDest}
+                  returnDestination={weatherReturn}
+                  onRetry={handleRefresh}
+                />
+              </SectionCard>
+
+              {hasTfl && (
+                <SectionCard title="TfL Status">
+                  <TflSection tfl={tfl} onRetry={handleRefresh} />
+                </SectionCard>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
