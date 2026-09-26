@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StationAutocomplete } from './StationAutocomplete';
-import { TflLineSelector, isLondonTerminus } from './TflLineSelector';
+import { TflLineSelector } from './TflLineSelector';
+import { isLondonTerminus } from '../data/londonTermini';
 import type { CommuteProfile } from '../api/types';
 
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;

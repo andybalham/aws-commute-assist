@@ -44,8 +44,9 @@ describe('tflService', () => {
 
     const result = await getLineStatuses(['victoria', 'district']);
 
+    // getLineStatuses sorts line IDs alphabetically before building the URL / cache key.
     expect(mockedAxios.get).toHaveBeenCalledWith(
-      'https://api.tfl.gov.uk/Line/victoria,district/Status',
+      'https://api.tfl.gov.uk/Line/district,victoria/Status',
       expect.objectContaining({
         params: { app_id: 'test-id', app_key: 'test-key' },
       })

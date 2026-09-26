@@ -66,8 +66,10 @@ describe('weatherService', () => {
   it('propagates API errors', async () => {
     mockedAxios.get.mockRejectedValue(new Error('Network error'));
 
+    // Distinct hour from the first test's cache key (BTN, 2026-03-28, hour 7)
+    // so this test hits the (mocked, rejecting) API instead of a cache hit.
     await expect(
-      getWeatherForecast('BTN', '2026-03-28T07:00:00')
+      getWeatherForecast('BTN', '2026-03-28T15:00:00')
     ).rejects.toThrow('Network error');
   });
 });

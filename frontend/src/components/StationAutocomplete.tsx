@@ -24,10 +24,13 @@ export function StationAutocomplete({
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sync display text when stationName prop changes (e.g. on edit)
-  useEffect(() => {
+  // Sync display text when stationName prop changes (e.g. on edit) — set
+  // during render, not in an effect, to avoid an extra commit per change.
+  const [prevStationName, setPrevStationName] = useState(stationName);
+  if (stationName !== prevStationName) {
+    setPrevStationName(stationName);
     setQuery(stationName);
-  }, [stationName]);
+  }
 
   // Close dropdown on outside click
   useEffect(() => {

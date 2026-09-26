@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme } from '../hooks/themeContext';
 
 function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();

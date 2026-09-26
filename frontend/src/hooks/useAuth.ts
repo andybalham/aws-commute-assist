@@ -16,7 +16,18 @@ export function useAuth(): AuthState & { handleSignOut: () => Promise<void> } {
     isAuthenticated: false,
   });
 
+  async function checkUser() {
+    try {
+      const user = await getCurrentUser();
+      setState({ user, isLoading: false, isAuthenticated: true });
+    } catch {
+      setState({ user: null, isLoading: false, isAuthenticated: false });
+    }
+  }
+
   useEffect(() => {
+    // Fetches auth state from Cognito (an external system) on mount — not derived-state sync.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkUser();
 
     const hubListener = Hub.listen('auth', ({ payload }) => {
@@ -29,15 +40,6 @@ export function useAuth(): AuthState & { handleSignOut: () => Promise<void> } {
 
     return () => hubListener();
   }, []);
-
-  async function checkUser() {
-    try {
-      const user = await getCurrentUser();
-      setState({ user, isLoading: false, isAuthenticated: true });
-    } catch {
-      setState({ user: null, isLoading: false, isAuthenticated: false });
-    }
-  }
 
   async function handleSignOut() {
     await signOut();

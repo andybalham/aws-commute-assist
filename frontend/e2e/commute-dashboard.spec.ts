@@ -443,7 +443,6 @@ test.describe('3.11–3.15 — Dashboard with live data', () => {
     await expect(refreshBtn).toBeVisible();
 
     // Click refresh and verify timestamp updates
-    const timestampBefore = await page.getByText(/Updated \d{1,2}:\d{2}/).textContent();
     await refreshBtn.click();
 
     // Button should show "Refreshing..." briefly
