@@ -320,6 +320,16 @@ Or edit `~\.aws\credentials` directly and remove the `[default]` section's acces
 
 All CDK resources are tagged with `Project: commute-dashboard` and `Environment: <env>`. Lambda log groups are configured with 1-month retention (previously defaulted to infinite). Deletion policies for DynamoDB, S3, ECR, and Cognito are all set to `RETAIN`.
 
+### ECR auth on Windows (`The stub received bad data.`)
+
+`docker login` to ECR can fail with `error storing credentials ... The stub received bad data.` when Docker Desktop's `credsStore: "desktop"` writes to Windows Credential Manager — ECR tokens can exceed its 2560-byte secret limit. Fix: map the registry to `amazon-ecr-credential-helper` in `~/.docker/config.json`:
+
+```json
+"credHelpers": { "<account>.dkr.ecr.eu-west-2.amazonaws.com": "ecr-login" }
+```
+
+`backend/deploy.mjs` detects this, skips `docker login`, and passes credentials from `aws configure export-credentials` to `docker push` as env vars — needed because the helper (v0.8.0) can't read `aws login` sessions and otherwise falls back to EC2 IMDS.
+
 ### Docker Image Requirements
 
 When building Docker images for the Lambda container (backend), you **must** use `--provenance=false` to force Docker V2 Schema 2 manifests. Newer Docker Desktop versions default to OCI manifests, which AWS Lambda does not support. Without this flag, `cdk deploy` will fail with:
